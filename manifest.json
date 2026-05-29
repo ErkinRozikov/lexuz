@@ -2,7 +2,7 @@
   "name": "LexUz — Қонунчилик базаси",
   "short_name": "LexUz",
   "description": "Ўзбекистон қонунчилиги ва норматив ҳужжатлар базаси. СИ ёрдамчи билан.",
-  "start_url": "./lexuz-supabase.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",

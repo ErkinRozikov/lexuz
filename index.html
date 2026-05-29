@@ -1,0 +1,2526 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LexUz — Қонунчилик Базаси</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --ink: #1a1814;
+  --ink2: #3d3a34;
+  --ink3: #7a7568;
+  --paper: #f7f4ef;
+  --paper2: #ede9e2;
+  --paper3: #e2ddd5;
+  --gold: #b8860b;
+  --gold-light: #f0e6c0;
+  --gold-pale: #faf6ea;
+  --blue: #1a3a5c;
+  --blue-light: #dce8f5;
+  --red: #8b1a1a;
+  --red-light: #f5dcdc;
+  --green: #1a4a2a;
+  --green-light: #dceee2;
+  --border: #d4cfc6;
+  --shadow: 0 1px 3px rgba(26,24,20,0.08), 0 4px 16px rgba(26,24,20,0.05);
+  --shadow-md: 0 2px 8px rgba(26,24,20,0.12), 0 8px 32px rgba(26,24,20,0.08);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'IBM Plex Sans', sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 0 24px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.logo {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--paper);
+  flex-shrink: 0;
+}
+.logo span { color: #c9a84c; }
+.search-wrap {
+  flex: 1;
+  max-width: 480px;
+  position: relative;
+}
+.search-wrap input {
+  width: 100%;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  padding: 7px 14px 7px 36px;
+  color: var(--paper);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 13.5px;
+  outline: none;
+  transition: all 0.2s;
+}
+.search-wrap input::placeholder { color: rgba(255,255,255,0.4); }
+.search-wrap input:focus {
+  background: rgba(255,255,255,0.15);
+  border-color: rgba(201,168,76,0.5);
+}
+.search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.45;
+  font-size: 15px;
+}
+.topbar-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.tb-btn {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.7);
+  border-radius: 5px;
+  padding: 5px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', sans-serif;
+  transition: all 0.15s;
+}
+.tb-btn:hover { background: rgba(255,255,255,0.1); color: var(--paper); }
+.tb-btn.active { background: #c9a84c; border-color: #c9a84c; color: var(--ink); font-weight: 600; }
+
+/* ── LAYOUT ── */
+.app {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  flex: 1;
+  overflow: hidden;
+  height: calc(100vh - 52px);
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  background: var(--paper2);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 16px 0;
+}
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.sidebar-section { margin-bottom: 6px; }
+.sidebar-heading {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink3);
+  padding: 6px 18px;
+}
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 18px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--ink2);
+  border-left: 2px solid transparent;
+  transition: all 0.15s;
+  user-select: none;
+}
+.sidebar-item:hover { background: var(--paper3); }
+.sidebar-item.active {
+  background: var(--gold-pale);
+  border-left-color: var(--gold);
+  color: var(--ink);
+  font-weight: 500;
+}
+.sidebar-item .icon { font-size: 15px; opacity: 0.65; width: 18px; text-align: center; }
+.sidebar-item .count {
+  margin-left: auto;
+  font-size: 11px;
+  background: var(--paper3);
+  color: var(--ink3);
+  border-radius: 9px;
+  padding: 1px 7px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.sidebar-item.active .count { background: var(--gold-light); color: var(--gold); }
+
+/* ── MAIN ── */
+.main { display: flex; overflow: hidden; }
+
+/* ── DOC LIST ── */
+.doc-list-panel {
+  width: 340px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.panel-header {
+  padding: 14px 18px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--paper);
+}
+.panel-title { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+.filter-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.filter-chip {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  color: var(--ink3);
+  background: none;
+  font-family: 'IBM Plex Sans', sans-serif;
+  transition: all 0.15s;
+}
+.filter-chip:hover { border-color: var(--gold); color: var(--gold); }
+.filter-chip.on { background: var(--gold); border-color: var(--gold); color: #fff; }
+
+.doc-list { overflow-y: auto; flex: 1; }
+.doc-list::-webkit-scrollbar { width: 4px; }
+.doc-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.doc-card {
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.12s;
+  position: relative;
+}
+.doc-card:hover { background: var(--gold-pale); }
+.doc-card.active { background: var(--gold-pale); border-left: 3px solid var(--gold); padding-left: 15px; }
+.doc-code {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--gold);
+  font-weight: 500;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.doc-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  line-height: 1.45;
+  margin-bottom: 6px;
+}
+.doc-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.doc-tag {
+  font-size: 10.5px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+.tag-active { background: var(--green-light); color: var(--green); }
+.tag-amended { background: var(--blue-light); color: var(--blue); }
+.tag-partial { background: var(--gold-light); color: var(--gold); }
+.doc-date { font-size: 11px; color: var(--ink3); }
+.doc-bookmark {
+  position: absolute;
+  top: 13px; right: 14px;
+  font-size: 15px;
+  cursor: pointer;
+  color: var(--border);
+  transition: color 0.15s;
+}
+.doc-bookmark:hover, .doc-bookmark.on { color: var(--gold); }
+
+/* ── READER ── */
+.reader-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #fff;
+}
+.reader-toolbar {
+  padding: 10px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--paper);
+  flex-shrink: 0;
+}
+.rt-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 5px 11px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--ink2);
+  font-family: 'IBM Plex Sans', sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s;
+}
+.rt-btn:hover { background: var(--paper2); border-color: var(--gold); color: var(--gold); }
+.rt-btn.highlight-btn { background: var(--gold-light); border-color: var(--gold); color: var(--gold); font-weight: 500; }
+.rt-sep { width: 1px; height: 20px; background: var(--border); }
+.rt-search {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--paper2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 5px 10px;
+  font-size: 12px;
+  color: var(--ink3);
+  cursor: pointer;
+}
+
+.reader-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px 48px 64px;
+  max-width: 860px;
+  width: 100%;
+  margin: 0 auto;
+}
+.reader-content::-webkit-scrollbar { width: 5px; }
+.reader-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.doc-header { margin-bottom: 28px; padding-bottom: 20px; border-bottom: 2px solid var(--paper2); }
+.doc-header-code {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--gold);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.doc-header-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--ink);
+  margin-bottom: 10px;
+}
+.doc-header-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--ink3);
+  flex-wrap: wrap;
+}
+.doc-header-meta span { display: flex; align-items: center; gap: 4px; }
+
+.chapter {
+  margin-bottom: 28px;
+}
+.chapter-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--blue);
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  background: var(--blue-light);
+  border-left: 3px solid var(--blue);
+  border-radius: 0 4px 4px 0;
+  letter-spacing: 0.01em;
+}
+
+/* ── АККОРДЕОН ── */
+.acc-bolim { margin-bottom: 14px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.acc-bolim-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; cursor: pointer; user-select: none;
+  background: #f0ece3; font-family: 'Playfair Display', serif;
+  font-size: 15px; font-weight: 700; color: var(--ink);
+  transition: background 0.15s;
+}
+.acc-bolim-head:hover { background: #ebe6dc; }
+.acc-chevron { font-size: 12px; color: var(--ink3); transition: transform 0.2s; flex-shrink: 0; }
+.acc-open > .acc-bolim-head .acc-chevron,
+.acc-open > .acc-bob-head .acc-chevron { transform: rotate(90deg); }
+.acc-count { margin-left: auto; font-size: 11px; color: var(--ink3); background: #fff; border-radius: 9px; padding: 2px 9px; font-family: 'IBM Plex Mono', monospace; }
+.acc-bolim-body { padding: 10px 12px; display: none; }
+.acc-open > .acc-bolim-body { display: block; }
+
+.acc-bob { margin-bottom: 10px; border: 1px solid var(--blue-light); border-radius: 7px; overflow: hidden; }
+.acc-bob-head {
+  display: flex; align-items: center; gap: 9px;
+  padding: 10px 14px; cursor: pointer; user-select: none;
+  background: var(--blue-light); font-size: 14px; font-weight: 600;
+  color: var(--blue); transition: background 0.15s;
+}
+.acc-bob-head:hover { background: #d2e3f5; }
+.acc-bob-body { padding: 10px 12px; display: none; }
+.acc-open > .acc-bob-body { display: block; }
+
+/* Модда ичидаги бандлар аккордеони */
+.band-toggle {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11.5px; color: var(--blue); cursor: pointer;
+  margin-top: 8px; user-select: none; padding: 3px 8px;
+  background: var(--blue-light); border-radius: 5px;
+}
+.band-list { display: none; margin-top: 8px; padding-left: 14px; border-left: 2px solid var(--blue-light); }
+.band-list.open { display: block; }
+.band-item { font-size: 12.5px; color: var(--ink2); line-height: 1.6; padding: 3px 0; }
+
+.article {
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--paper3);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+}
+.article:hover { border-color: var(--gold); background: var(--gold-pale); }
+.article.highlighted { border-color: var(--gold); background: var(--gold-pale); }
+.article.highlighted::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--gold);
+  border-radius: 3px 0 0 3px;
+}
+.article.noted { border-color: #2a6496; background: #f0f7fd; }
+.article.noted::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: #2a6496;
+  border-radius: 3px 0 0 3px;
+}
+.article-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gold);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.article-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 7px;
+  line-height: 1.4;
+}
+.article-text {
+  font-size: 13px;
+  color: var(--ink2);
+  line-height: 1.7;
+}
+.article-actions {
+  display: none;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--paper3);
+}
+.article:hover .article-actions, .article.highlighted .article-actions, .article.noted .article-actions {
+  display: flex;
+}
+.art-btn {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--paper);
+  cursor: pointer;
+  color: var(--ink2);
+  font-family: 'IBM Plex Sans', sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s;
+}
+.art-btn:hover { border-color: var(--gold); color: var(--gold); background: var(--gold-pale); }
+.art-btn.active { background: var(--gold); border-color: var(--gold); color: #fff; }
+.art-btn.blue:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+.art-note-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #2a6496;
+  background: #dce9f5;
+  border-radius: 3px;
+  padding: 2px 8px;
+  margin-top: 8px;
+  cursor: pointer;
+}
+.cross-ref {
+  color: var(--blue);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  cursor: pointer;
+  font-weight: 500;
+}
+.cross-ref:hover { color: var(--gold); }
+
+/* ── NOTE PANEL ── */
+.note-panel {
+  display: none;
+  position: fixed;
+  right: 0; top: 52px; bottom: 0;
+  width: 300px;
+  background: #fff;
+  border-left: 1px solid var(--border);
+  z-index: 50;
+  flex-direction: column;
+  box-shadow: -4px 0 16px rgba(26,24,20,0.08);
+}
+.note-panel.open { display: flex; }
+.note-header {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.note-title { font-size: 13px; font-weight: 600; color: var(--ink); }
+.note-close {
+  width: 24px; height: 24px;
+  background: none; border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--ink3);
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+}
+.note-close:hover { background: var(--paper2); }
+.note-context {
+  padding: 10px 16px;
+  background: var(--gold-pale);
+  border-bottom: 1px solid var(--gold-light);
+  font-size: 11.5px;
+  color: var(--gold);
+  font-weight: 500;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.note-body { padding: 14px 16px; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+.note-textarea {
+  flex: 1;
+  min-height: 120px;
+  resize: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--paper);
+  outline: none;
+  transition: border-color 0.15s;
+  line-height: 1.6;
+}
+.note-textarea:focus { border-color: var(--gold); }
+.note-save-btn {
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  border-radius: 6px;
+  padding: 9px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.note-save-btn:hover { background: var(--blue); }
+.saved-notes { padding: 0 16px 16px; overflow-y: auto; }
+.saved-note-item {
+  padding: 10px 12px;
+  background: var(--paper2);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  font-size: 12.5px;
+  color: var(--ink2);
+  line-height: 1.5;
+  border: 1px solid var(--border);
+}
+.saved-note-art {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--gold);
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+.saved-note-text { color: var(--ink2); }
+
+/* ── AI PANEL ── */
+.ai-panel {
+  display: none;
+  position: fixed;
+  right: 0; top: 52px; bottom: 0;
+  width: 320px;
+  background: var(--ink);
+  border-left: 1px solid rgba(255,255,255,0.1);
+  z-index: 50;
+  flex-direction: column;
+}
+.ai-panel.open { display: flex; }
+.ai-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ai-title { font-size: 13px; font-weight: 600; color: #c9a84c; font-family: 'Playfair Display', serif; }
+.ai-close { width:24px;height:24px;background:none;border:none;cursor:pointer;font-size:16px;color:rgba(255,255,255,0.4);border-radius:4px;display:flex;align-items:center;justify-content:center; }
+.ai-close:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.ai-messages { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.ai-messages::-webkit-scrollbar { width: 3px; }
+.ai-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
+.ai-msg { font-size: 13px; line-height: 1.65; }
+.ai-msg.user { color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.05); border-radius: 6px; padding: 9px 12px; }
+.ai-msg.bot { color: rgba(255,255,255,0.88); }
+.ai-msg.bot strong { color: #c9a84c; }
+.ai-footer { padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.08); }
+.ai-input-row { display: flex; gap: 8px; }
+.ai-input {
+  flex: 1;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: #fff;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 13px;
+  outline: none;
+}
+.ai-input:focus { border-color: rgba(201,168,76,0.5); }
+.ai-input::placeholder { color: rgba(255,255,255,0.3); }
+.ai-send {
+  background: #c9a84c;
+  border: none;
+  border-radius: 6px;
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+  color: var(--ink);
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+.ai-send:hover { background: #b8970a; }
+
+/* ── HISTORY PANEL ── */
+.history-bar {
+  border-top: 1px solid var(--border);
+  background: var(--paper2);
+  padding: 8px 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+.hist-label { font-size: 11px; color: var(--ink3); white-space: nowrap; }
+.hist-item {
+  font-size: 11.5px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: var(--paper3);
+  border: 1px solid var(--border);
+  color: var(--ink2);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.hist-item:hover { border-color: var(--gold); color: var(--gold); background: var(--gold-pale); }
+
+/* ── EMPTY STATE ── */
+.empty-reader {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--ink3);
+}
+.empty-icon { font-size: 40px; opacity: 0.3; }
+.empty-text { font-size: 14px; }
+
+/* ── ANIMATIONS ── */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.doc-card { animation: fadeIn 0.25s ease both; }
+.article { animation: fadeIn 0.2s ease both; }
+
+/* ── SCROLLBAR ── */
+.reader-content::-webkit-scrollbar { width: 5px; }
+.reader-content::-webkit-scrollbar-track { background: transparent; }
+
+/* ── TOOLTIP ── */
+.tooltip {
+  position: fixed;
+  background: var(--ink);
+  color: #fff;
+  font-size: 11px;
+  padding: 5px 10px;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 200;
+  display: none;
+  max-width: 220px;
+  line-height: 1.5;
+}
+
+/* ════════════════════════════════════════════════════════
+   МОБИЛ ОПТИМИЗАЦИЯ (768px дан камроқ экранлар)
+   ════════════════════════════════════════════════════════ */
+.hamburger { display: none; }
+.mobile-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 90; }
+.mobile-backdrop.open { display: block; }
+
+@media (max-width: 768px) {
+  /* Топбар — ихчам */
+  .topbar { padding: 0 10px; height: 52px; gap: 8px; }
+  .logo { font-size: 17px; }
+  .search-wrap { max-width: none; }
+  .search-wrap input { font-size: 14px; padding: 8px 14px 8px 36px; }
+  .topbar-actions { gap: 4px; }
+  .topbar-actions .tb-text { display: none; }
+  .topbar-actions .tb-btn {
+    font-size: 16px; padding: 8px 10px;
+    min-width: 38px; height: 38px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Hamburger тугмаси */
+  .hamburger {
+    display: flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; background: none; border: none;
+    color: var(--paper); cursor: pointer; font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  /* Sidebar — телефонда яширин, очиш мумкин */
+  .app { grid-template-columns: 1fr; }
+  .sidebar {
+    position: fixed; top: 52px; bottom: 0; left: -280px;
+    width: 280px; z-index: 100; transition: left 0.25s ease;
+    box-shadow: 4px 0 16px rgba(0,0,0,0.1);
+  }
+  .sidebar.open { left: 0; }
+
+  /* Asosiy мазмун — sidebar'siz */
+  .main { flex-direction: column; height: calc(100vh - 52px); }
+
+  /* Doc list panel ёки reader — фақат битта кўринади */
+  .doc-list-panel {
+    width: 100%; height: 100%;
+    display: none; border-right: none;
+  }
+  .doc-list-panel.mobile-show { display: flex; }
+  .reader-panel {
+    width: 100%; height: 100%;
+    display: none;
+  }
+  .reader-panel.mobile-show { display: flex; }
+
+  /* Reader content — мобил учун ихчам */
+  .reader-content { padding: 16px 16px 40px; }
+  .doc-header-title { font-size: 18px; }
+  .doc-header-meta { font-size: 11px; gap: 10px; }
+  .article { padding: 12px 14px; margin-bottom: 12px; }
+  .article-title { font-size: 14px; }
+  .article-text { font-size: 13px; line-height: 1.6; }
+  .article-actions { flex-wrap: wrap; gap: 5px; }
+  .art-btn { font-size: 10.5px; padding: 5px 9px; }
+
+  /* Reader toolbar — мобил */
+  .reader-toolbar { padding: 8px 12px; overflow-x: auto; flex-wrap: nowrap; }
+  .reader-toolbar .rt-btn { font-size: 11px; padding: 6px 10px; white-space: nowrap; }
+  .rt-search { display: none; }   /* мобилда қидиришни top'da ишлатинг */
+
+  /* Аккордеон — мобил */
+  .acc-bolim-head { padding: 11px 14px; font-size: 14px; }
+  .acc-bob-head { padding: 9px 12px; font-size: 13px; }
+  .acc-bolim-body, .acc-bob-body { padding: 8px 10px; }
+
+  /* "Орқага" тугмаси (моддалар рўйхатидан reader'га ўтгандан кейин қайтиш) */
+  .mobile-back {
+    display: none; align-items: center; gap: 6px;
+    padding: 8px 14px; font-size: 13px;
+    background: var(--paper2); border-bottom: 1px solid var(--border);
+    cursor: pointer; color: var(--ink2);
+  }
+  .reader-panel.mobile-show .mobile-back { display: flex; }
+
+  /* Модал — мобилда тўлиқ экран */
+  #addDocOverlay > div { max-width: 100%; max-height: 100vh; border-radius: 0; }
+
+  /* СИ/Изоҳ панеллар — мобилда тўлиқ экран */
+  .note-panel, .ai-panel { width: 100% !important; }
+
+  /* History bar — мобилда яширин */
+  .history-bar { display: none !important; }
+
+  /* Туgmalar тегиш учун катта (мин 44px) */
+  .tb-btn { min-height: 36px; }
+  button { min-height: 36px; }
+
+  /* Қидирув натижалари — мобилда тўлиқ экран */
+  #searchResults { left: -10px; right: -10px; max-height: 70vh; }
+}
+
+/* Жуда кичик экранлар (Android телефонлар) */
+@media (max-width: 480px) {
+  .topbar-actions .tb-btn { min-width: 32px; height: 32px; padding: 6px; }
+  .doc-card { padding: 11px 14px; }
+  .doc-title { font-size: 12.5px; }
+  .article-actions .art-btn { flex: 1; min-width: 0; text-align: center; justify-content: center; }
+}
+</style>
+<!-- ── PWA (Android'da ҳам ишлайди) ── -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a1814">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="LexUz">
+<link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <button class="hamburger" onclick="toggleSidebar()" aria-label="Меню">☰</button>
+  <div class="logo">Lex<span>Uz</span></div>
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="globalSearch" placeholder="Ҳужжат, модда, банд, калит сўз..." oninput="globalSearchFn(this.value)" autocomplete="off">
+    <div id="searchResults" style="display:none;position:absolute;top:42px;left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.15);max-height:420px;overflow-y:auto;z-index:200;"></div>
+  </div>
+  <div class="topbar-actions">
+    <button class="tb-btn" onclick="openAddDoc()" style="background:#c9a84c;border-color:#c9a84c;color:#1a1814;font-weight:600">➕<span class="tb-text"> Ҳужжат қўшиш</span></button>
+    <button class="tb-btn active" onclick="setView('docs')">📄<span class="tb-text"> Ҳужжатлар</span></button>
+    <button class="tb-btn" onclick="setView('bookmarks')">🔖<span class="tb-text"> Белгиланганлар</span></button>
+    <button class="tb-btn" id="noteToggleBtn" onclick="toggleNote()">🗒<span class="tb-text"> Изоҳлар</span></button>
+    <button class="tb-btn" id="aiToggleBtn" onclick="toggleAI()">✦<span class="tb-text"> СИ Ёрдамчи</span></button>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div class="mobile-backdrop" id="mobileBackdrop" onclick="toggleSidebar()"></div>
+<div class="app">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-heading">Асосий</div>
+      <div class="sidebar-item active" onclick="filterCat('all')">
+        <span class="icon">📚</span> Барча ҳужжатлар
+        <span class="count" id="countAll">12</span>
+      </div>
+      <div class="sidebar-item" onclick="filterCat('bookmarked')">
+        <span class="icon">🔖</span> Белгиланганлар
+        <span class="count" id="countBm">0</span>
+      </div>
+      <div class="sidebar-item" onclick="filterCat('noted')">
+        <span class="icon">🗒</span> Изоҳли моддалар
+        <span class="count" id="countNoted">0</span>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-heading">Тоифалар</div>
+      <div class="sidebar-item" onclick="filterCat('kodeks')">
+        <span class="icon">⚖️</span> Кодекслар
+        <span class="count" id="cntKodeks">0</span>
+      </div>
+      <div class="sidebar-item" onclick="filterCat('qonun')">
+        <span class="icon">📜</span> Қонунлар
+        <span class="count" id="cntQonun">0</span>
+      </div>
+      <div class="sidebar-item" onclick="filterCat('farmon')">
+        <span class="icon">📋</span> Фармонлар
+        <span class="count" id="cntFarmon">0</span>
+      </div>
+      <div class="sidebar-item" onclick="toggleQarorGroup(event)">
+        <span class="icon" id="qarorChevron" style="transition:transform 0.2s;">▸</span> Қарорлар
+        <span class="count" id="cntQaror">0</span>
+      </div>
+      <div id="qarorSub" style="display:none;">
+        <div class="sidebar-item" onclick="filterCat('pq')" style="padding-left:38px;font-size:12.5px;">
+          <span class="icon">›</span> ПҚ (Президент қарори)
+          <span class="count" id="cntPq">0</span>
+        </div>
+        <div class="sidebar-item" onclick="filterCat('vm')" style="padding-left:38px;font-size:12.5px;">
+          <span class="icon">›</span> Вазирлар маҳкамаси
+          <span class="count" id="cntVm">0</span>
+        </div>
+      </div>
+      <div class="sidebar-item" onclick="filterCat('boshqa')">
+        <span class="icon">📂</span> Бошқалар
+        <span class="count" id="cntBoshqa">0</span>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-heading">Соҳа</div>
+      <div class="sidebar-item" onclick="filterSoha('fuqaro')">
+        <span class="icon">🏛</span> Фуқаролик ҳуқуқи
+      </div>
+      <div class="sidebar-item" onclick="filterSoha('mehnat')">
+        <span class="icon">👷</span> Меҳнат ҳуқуқи
+      </div>
+      <div class="sidebar-item" onclick="filterSoha('soliq')">
+        <span class="icon">💰</span> Солиқ ҳуқуқи
+      </div>
+      <div class="sidebar-item" onclick="filterSoha('tadbirkor')">
+        <span class="icon">🏢</span> Тадбиркорлик
+      </div>
+      <div class="sidebar-item" onclick="filterSoha('jinoyat')">
+        <span class="icon">🔒</span> Жиноят ҳуқуқи
+      </div>
+      <div class="sidebar-item" onclick="filterSoha('energetika')">
+        <span class="icon">⚡</span> Ёқилғи энергетика
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main">
+    <!-- DOC LIST -->
+    <div class="doc-list-panel">
+      <div class="panel-header">
+        <div class="panel-title" id="panelTitle">Барча ҳужжатлар</div>
+        <div class="filter-row">
+          <button class="filter-chip on" onclick="toggleChip(this,'active')">Амалдаги</button>
+          <button class="filter-chip on" onclick="toggleChip(this,'amended')">Ўзгартирилган</button>
+          <button class="filter-chip on" onclick="toggleChip(this,'partial')">Қисман</button>
+        </div>
+      </div>
+      <div class="doc-list" id="docList"></div>
+    </div>
+
+    <!-- READER -->
+    <div class="reader-panel">
+      <div class="mobile-back" onclick="mobileShowList()">← Ҳужжатлар рўйхатига</div>
+      <div class="reader-toolbar" id="readerToolbar" style="display:none">
+        <button class="rt-btn" onclick="editCurrentDoc()">✏️ Таҳрирлаш</button>
+        <button class="rt-btn" onclick="addArticleToCurrentDoc()">➕ Модда</button>
+        <div class="rt-sep"></div>
+        <button class="rt-btn" onclick="exportPDF()">📥 PDF</button>
+        <button class="rt-btn" onclick="copyLink()">🔗 Ҳавола</button>
+        <div class="rt-sep"></div>
+        <button class="rt-btn" onclick="deleteCurrentDoc()" style="border-color:var(--red);color:var(--red)">🗑 Ўчириш</button>
+        <div class="rt-search" style="padding:0;border:none;background:none;">
+          <input type="text" id="inDocSearch" placeholder="🔍 Шу ҳужжатдан қидириш..." oninput="searchInDoc(this.value)" style="border:1px solid var(--border);border-radius:5px;padding:6px 12px;font-size:12px;font-family:'IBM Plex Sans',sans-serif;color:var(--ink);background:var(--paper2);outline:none;width:220px;">
+          <span id="inDocCount" style="font-size:11px;color:var(--ink3);margin-left:8px;"></span>
+        </div>
+      </div>
+      <div id="readerEmpty" class="empty-reader">
+        <div class="empty-icon">⚖️</div>
+        <div class="empty-text">Ўқиш учун ҳужжат танланг</div>
+      </div>
+      <div id="readerContent" class="reader-content" style="display:none"></div>
+      <div class="history-bar" id="histBar" style="display:none">
+        <span class="hist-label">Кўрилди:</span>
+        <span id="histItems"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NOTE PANEL -->
+<div class="note-panel" id="notePanel">
+  <div class="note-header">
+    <span class="note-title">🗒 Изоҳлар</span>
+    <button class="note-close" onclick="toggleNote()">✕</button>
+  </div>
+  <div class="note-context" id="noteContext">Модда танланг</div>
+  <div class="note-body">
+    <textarea class="note-textarea" id="noteText" placeholder="Изоҳингизни ёзинг..."></textarea>
+    <button class="note-save-btn" onclick="saveNote()">Сақлаш</button>
+  </div>
+  <div class="saved-notes" id="savedNotes"></div>
+</div>
+
+<!-- AI PANEL -->
+<div class="ai-panel" id="aiPanel">
+  <div class="ai-header">
+    <span class="ai-title">✦ СИ Юридик Ёрдамчи</span>
+    <button class="ai-close" onclick="toggleAI()">✕</button>
+  </div>
+  <div class="ai-messages" id="aiMessages">
+    <div class="ai-msg bot">Ассалому алайкум! Мен LexUz базасидаги қонунчилик ҳужжатлари бўйича ёрдам бераман — модда ва бандларни тушунтириш, таҳлил қилиш ва тавсиялар беришим мумкин.<br><br>Исталган моддани очиб <strong>«🤖 СИга юбориш»</strong> тугмасини босинг ёки қуйида саволингизни ёзинг.</div>
+  </div>
+  <div class="ai-footer">
+    <div class="ai-input-row">
+      <input type="text" class="ai-input" id="aiInput" placeholder="Савол беринг..." onkeydown="if(event.key==='Enter')sendAI()">
+      <button class="ai-send" onclick="sendAI()">➤</button>
+    </div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<!-- ҲУЖЖАТ ҚЎШИШ МОДАЛИ -->
+<div id="addDocOverlay" style="display:none;position:fixed;inset:0;background:rgba(26,24,20,0.5);z-index:500;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:14px;width:100%;max-width:620px;max-height:88vh;overflow-y:auto;box-shadow:0 12px 48px rgba(0,0,0,0.25);">
+    <div style="padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:between;position:sticky;top:0;background:#fff;border-radius:14px 14px 0 0;">
+      <span id="addDocTitle" style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--ink);flex:1">➕ Янги ҳужжат қўшиш</span>
+      <button onclick="closeAddDoc()" style="width:28px;height:28px;border:none;background:var(--paper2);border-radius:6px;cursor:pointer;font-size:16px;color:var(--ink3)">✕</button>
+    </div>
+    <div style="padding:24px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div>
+          <label class="adf-label">Ҳужжат коди *</label>
+          <input class="adf-input" id="adKod" placeholder="масалан: ЎРҚ-2025">
+        </div>
+        <div>
+          <label class="adf-label">ID (лотин, бўш жойсиз) *</label>
+          <input class="adf-input" id="adId" placeholder="масалан: yangi-qonun">
+        </div>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label class="adf-label">Ҳужжат номи *</label>
+        <input class="adf-input" id="adSarlavha" placeholder="масалан: Янги қонун тўғрисида">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div>
+          <label class="adf-label">Тури</label>
+          <select class="adf-input" id="adTur">
+            <option value="kodeks">Кодекс</option>
+            <option value="qonun">Қонун</option>
+            <option value="farmon">Фармон</option>
+            <option value="pq">ПҚ (Президент қарори)</option>
+            <option value="vm">Вазирлар маҳкамаси қарори</option>
+            <option value="boshqa">Бошқа</option>
+          </select>
+        </div>
+        <div>
+          <label class="adf-label">Соҳа</label>
+          <select class="adf-input" id="adSoha">
+            <option value="fuqaro">Фуқаролик</option>
+            <option value="mehnat">Меҳнат</option>
+            <option value="soliq">Солиқ</option>
+            <option value="tadbirkor">Тадбиркорлик</option>
+            <option value="jinoyat">Жиноят</option>
+            <option value="energetika">Ёқилғи энергетика</option>
+          </select>
+        </div>
+        <div>
+          <label class="adf-label">Ҳолати</label>
+          <select class="adf-input" id="adStatus">
+            <option value="active">Амалдаги</option>
+            <option value="amended">Ўзгартирилган</option>
+            <option value="partial">Қисман</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
+        <div>
+          <label class="adf-label">Қабул санаси</label>
+          <input class="adf-input" id="adSana" placeholder="масалан: 1 январь 2025">
+        </div>
+        <div>
+          <label class="adf-label">Янгиланган сана</label>
+          <input class="adf-input" id="adYangilangan" placeholder="масалан: 1 март 2025">
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--border);padding-top:18px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <span style="font-size:14px;font-weight:600;color:var(--ink)">📑 Моддалар</span>
+          <div style="display:flex;gap:8px;">
+            <button onclick="toggleBulkPanel()" id="bulkToggleBtn" style="font-size:12px;padding:5px 12px;border:1px solid var(--blue);background:var(--blue-light);color:var(--blue);border-radius:5px;cursor:pointer;font-weight:500">⚡ Тез киритиш</button>
+            <button onclick="addModdaRow()" style="font-size:12px;padding:5px 12px;border:1px solid var(--gold);background:var(--gold-pale);color:var(--gold);border-radius:5px;cursor:pointer;font-weight:500">+ Битта модда</button>
+          </div>
+        </div>
+
+        <div id="bulkPanel" style="display:none;background:#eef4fb;border:1px solid #b5d4f4;border-radius:8px;padding:14px;margin-bottom:14px;">
+          <div style="font-size:12.5px;color:#185fa5;margin-bottom:10px;line-height:1.7;">
+            <strong>Матнни шу ерга ташланг — илова автоматик ажратади.</strong><br>
+            «1-модда», «I БОБ» каби сўзлар ва «55.» рақамли бандлар автоматик танилади. Аниқроқ бўлиши учун белгилардан фойдаланинг:
+            <div style="background:#fff;border-radius:6px;padding:10px 12px;margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.9;">
+              <span style="color:#993c1d;">#</span> Бўлим номи<br>
+              <span style="color:#185fa5;">##</span> Боб номи<br>
+              <span style="color:#0f6e56;">###</span> 1-модда. Сарлавҳа<br>
+              <span style="color:#5f5e5a;">-</span> банд &nbsp;ёки&nbsp; <span style="color:#5f5e5a;">55.</span> рақамли банд
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:8px;">
+            <button onclick="insertTemplate()" style="font-size:11.5px;padding:4px 10px;border:1px solid #b5d4f4;background:#fff;color:#185fa5;border-radius:5px;cursor:pointer;">📋 Намуна қолип</button>
+          </div>
+          <textarea id="bulkText" placeholder="# I БЎЛИМ. Умумий қоидалар&#10;## 1-боб. Асосий ҳолатлар&#10;### 1-модда. Қонуннинг мақсади&#10;Ушбу қонун қуйидагиларни тартибга солади:&#10;- фуқароларнинг ҳуқуқлари;&#10;- мажбуриятлар тартиби.&#10;### 2-модда. Асосий тушунчалар&#10;Қуйидаги тушунчалар қўлланилади." style="width:100%;min-height:180px;padding:10px 12px;border:1px solid #b5d4f4;border-radius:6px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;line-height:1.6;resize:vertical;outline:none;"></textarea>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:10px;">
+            <button onclick="parseBulkText()" style="font-size:13px;padding:8px 18px;border:none;background:#185fa5;color:#fff;border-radius:6px;cursor:pointer;font-weight:500">🔀 Ажратиш</button>
+            <span id="bulkResult" style="font-size:12.5px;color:#185fa5;"></span>
+          </div>
+        </div>
+
+        <div id="moddaRows"></div>
+      </div>
+
+      <div id="addDocError" style="display:none;background:var(--red-light);color:var(--red);padding:10px 14px;border-radius:6px;font-size:13px;margin-top:14px;"></div>
+    </div>
+    <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;position:sticky;bottom:0;background:#fff;border-radius:0 0 14px 14px;">
+      <button onclick="closeAddDoc()" style="padding:9px 18px;border:1px solid var(--border);background:#fff;border-radius:6px;cursor:pointer;font-size:13px;color:var(--ink2)">Бекор қилиш</button>
+      <button id="adSaveBtn" onclick="saveNewDoc()" style="padding:9px 22px;border:none;background:var(--ink);color:var(--paper);border-radius:6px;cursor:pointer;font-size:13px;font-weight:500">💾 Сақлаш</button>
+    </div>
+  </div>
+</div>
+<style>
+.adf-label{display:block;font-size:12px;font-weight:500;color:var(--ink3);margin-bottom:5px;}
+.adf-input{width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:6px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:var(--ink);background:var(--paper);outline:none;transition:border-color 0.15s;}
+.adf-input:focus{border-color:var(--gold);}
+.modda-row{background:var(--paper2);border-radius:8px;padding:12px;margin-bottom:10px;position:relative;}
+.modda-row-del{position:absolute;top:8px;right:8px;width:22px;height:22px;border:none;background:var(--red-light);color:var(--red);border-radius:5px;cursor:pointer;font-size:12px;}
+</style>
+
+<script>
+// ════════════════════════════════════════════════════════
+//  SUPABASE SOZLAMASI
+//  Project Settings → API bo'limidan oling va kiriting
+// ════════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://ywnxnvtjseewcersytgn.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3bnhudnRqc2Vld2NlcnN5dGduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5NDkyNTIsImV4cCI6MjA5NTUyNTI1Mn0.l1-o7OvZxk8lHVlRYqw5-UpwdCDRaQtrpRkN0yMQaKs';
+
+// ════════════════════════════════════════════════════════
+//  СИ ЁРДАМЧИ — Google Gemini (бепул)
+//  aistudio.google.com дан бепул калит олинг ва шу ерга қўйинг
+// ════════════════════════════════════════════════════════
+const GEMINI_API_KEY = 'SIZNING-GEMINI-KEY';
+
+let db = null;
+let DEMO_MODE = false;
+try {
+  if (SUPABASE_URL.includes('SIZNING') || SUPABASE_KEY.includes('SIZNING')) {
+    DEMO_MODE = true;
+  } else {
+    db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  }
+} catch(e) { DEMO_MODE = true; }
+
+// ── DEMO DATA (Supabase ulanmaganda ishlatiladi) ──
+const DEMO_DOCS = [
+  {
+    id:'fk', code:'ФК-1997', title:'Фуқаролик Кодекси', type:'kodeks', soha:'fuqaro',
+    status:'active', date:'1 март 1997', updated:'15 апрель 2024',
+    chapters:[
+      { title:'I БОБ. Умумий қоидалар',
+        articles:[
+          { num:'1-модда', title:'Фуқаролик қонун ҳужжатлари', highlighted:false, noted:false, note:'',
+            text:'Ўзбекистон Республикасининг фуқаролик қонун ҳужжатлари мулкий муносабатларни, шунингдек улар билан боғлиқ шахсий номулкий муносабатларни тартибга солади.' },
+          { num:'2-модда', title:'Фуқаролик ҳуқуқининг предмети', highlighted:false, noted:false, note:'',
+            text:'Фуқаролик ҳуқуқи мулкий ва мулкий бўлмаган шахсий муносабатларни тартибга солади. Тадбиркорлик субъектлари тенг ҳуқуқли асосда муносабатга киришади. Батафсил қаранг: <span class="cross-ref" onclick="scrollToDoc(\'tk\')">ТК 4-модда</span>.' },
+          { num:'3-модда', title:'Аналогия', highlighted:false, noted:false, note:'',
+            text:'Агар тарафларнинг муносабатлари тўғридан-тўғри қонун ҳужжатлари ёки тарафларнинг шартномаси билан тартибга солинмаган бўлса, бундай муносабатларга ушбу муносабатларни тартибга соладиган фуқаролик қонун ҳужжатлари нормалари қўлланилади (қонун аналогияси).' },
+        ]
+      },
+      { title:'II БОБ. Шахслар',
+        articles:[
+          { num:'11-модда', title:'Фуқаронинг ҳуқуқ лаёқати', highlighted:false, noted:false, note:'',
+            text:'Фуқарода фуқаролик ҳуқуқларига эга бўлиш ва фуқаролик мажбуриятларини ўз зиммасига олиш қобилияти (фуқаролик ҳуқуқ лаёқати) туғилган пайтдан бошланади ва у вафот этган пайтда тугайди.' },
+          { num:'18-модда', title:'Тадбиркорлик фаолияти', highlighted:false, noted:false, note:'',
+            text:'Фуқаро давлат рўйхатидан ўтган пайтдан бошлаб юридик шахс тузмай туриб, мустақил равишда тадбиркорлик фаолиятини амалга ошириши мумкин. Солиқлар тўғрисидаги: <span class="cross-ref" onclick="scrollToDoc(\'sk\')">СК 22-модда</span>.' },
+        ]
+      }
+    ]
+  },
+  {
+    id:'tk', code:'ТК-1995', title:'Тадбиркорлик Кодекси', type:'kodeks', soha:'tadbirkor',
+    status:'amended', date:'25 апрель 1995', updated:'10 январь 2025',
+    chapters:[
+      { title:'I БОБ. Асосий тушунчалар',
+        articles:[
+          { num:'1-модда', title:'Тадбиркорлик тушунчаси', highlighted:false, noted:false, note:'',
+            text:'Тадбиркорлик — бу мулк эгасининг ёки уни бошқарувчи шахснинг ўз мулкини фойда олиш мақсадида тасарруф этиш орқали мустақил равишда амалга ошириладиган ташаббускорлик фаолиятидир.' },
+          { num:'4-модда', title:'Тадбиркорлик субъектлари', highlighted:false, noted:false, note:'',
+            text:'Тадбиркорлик субъектлари: якка тартибдаги тадбиркорлар; юридик шахслар; чет эллик инвесторлар. Фуқаролик ҳуқуқи билан муносабат: <span class="cross-ref" onclick="scrollToDoc(\'fk\')">ФК 2-модда</span>.' },
+        ]
+      },
+      { title:'II БОБ. Рўйхатдан ўтиш',
+        articles:[
+          { num:'10-модда', title:'Давлат рўйхатидан ўтказиш', highlighted:false, noted:false, note:'',
+            text:'Тадбиркорлик фаолиятини амалга ошириш учун белгиланган тартибда давлат рўйхатидан ўтиш мажбурий ҳисобланади. Рўйхатдан ўтиш 3 иш куни ичида амалга оширилади.' },
+          { num:'11-модда', title:'Ҳужжатлар рўйхати', highlighted:false, noted:false, note:'',
+            text:'Рўйхатдан ўтиш учун қуйидаги ҳужжатлар тақдим этилади: аризанома; паспорт нусхаси; давлат бажи тўланганлиги тўғрисидаги ҳужжат.' },
+        ]
+      }
+    ]
+  },
+  {
+    id:'mk', code:'МК-1995', title:'Меҳнат Кодекси', type:'kodeks', soha:'mehnat',
+    status:'active', date:'21 декабрь 1995', updated:'1 март 2024',
+    chapters:[
+      { title:'I БОБ. Умумий қоидалар',
+        articles:[
+          { num:'1-модда', title:'Меҳнат муносабатлари', highlighted:false, noted:false, note:'',
+            text:'Меҳнат муносабатлари — ишчи (хизматчи) ва иш берувчи ўртасидаги меҳнат шартномаси асосида вужудга келадиган муносабатлар.' },
+          { num:'14-модда', title:'Иш ҳақи кафолатлари', highlighted:false, noted:false, note:'',
+            text:'Меҳнатга ҳақ тўлашнинг энг кам миқдори давлат томонидан белгиланади ва иш ҳақи ҳеч қачон ушбу миқдордан паст бўлмаслиги шарт.' },
+        ]
+      },
+      { title:'V БОБ. Таътил',
+        articles:[
+          { num:'133-модда', title:'Йиллик меҳнат таътили', highlighted:false, noted:false, note:'',
+            text:'Ишчиларга (хизматчиларга) ҳар йили камида 15 иш куни давомидаги асосий йиллик ишга ҳақ тўланадиган таътил берилади.' },
+          { num:'136-модда', title:'Таътил вақти', highlighted:false, noted:false, note:'',
+            text:'Йиллик таътил тарафларнинг келишувига кўра берилади. Меҳнат шартномасида ёки коллектив шартномада таътил тартиби аниқлаштирилиши мумкин.' },
+        ]
+      }
+    ]
+  },
+  {
+    id:'sk', code:'СК-1997', title:'Солиқ Кодекси', type:'kodeks', soha:'soliq',
+    status:'amended', date:'24 апрель 1997', updated:'1 январь 2025',
+    chapters:[
+      { title:'I БОБ. Умумий қоидалар',
+        articles:[
+          { num:'1-модда', title:'Солиқ кодексининг вазифалари', highlighted:false, noted:false, note:'',
+            text:'Ушбу Кодекс Ўзбекистон Республикасида солиқлар ва йиғимларни белгилаш, ўзгартириш, бекор қилиш тартибини, шунингдек солиқ муносабатларида иштирок этувчиларнинг ҳуқуқ ва мажбуриятларини белгилайди.' },
+          { num:'22-модда', title:'Якка тартибдаги тадбиркор', highlighted:false, noted:false, note:'',
+            text:'Якка тартибдаги тадбиркор ФК 18-моддасига мувофиқ давлат рўйхатидан ўтган кундан бошлаб солиқ тўловчи деб эътироф этилади. Қаранг: <span class="cross-ref" onclick="scrollToDoc(\'fk\')">ФК 18-модда</span>.' },
+        ]
+      }
+    ]
+  },
+  {
+    id:'tadbirkor-q', code:'ЎРҚ-2000', title:'Тадбиркорлик фаолиятини ҳимоя қилиш тўғрисидаги Қонун', type:'qonun', soha:'tadbirkor',
+    status:'active', date:'25 май 2000', updated:'5 февраль 2024',
+    chapters:[
+      { title:'I БОБ. Умумий қоидалар',
+        articles:[
+          { num:'1-модда', title:'Қонуннинг мақсади', highlighted:false, noted:false, note:'',
+            text:'Ушбу Қонун тадбиркорлик фаолиятини давлат муҳофазасини таъминлаш, тадбиркорларнинг ҳуқуқ ва эркинликларини ҳимоя қилиш мақсадида қабул қилинган.' },
+          { num:'5-модда', title:'Текширишлар', highlighted:false, noted:false, note:'',
+            text:'Тадбиркорлик субъектларини текшириш белгиланган тартибда ва муддатларда амалга оширилади. Режасиз текширишлар фақат асосли ҳолларда ўтказилади.' },
+        ]
+      }
+    ]
+  },
+  {
+    id:'raqamli-q', code:'ЎРҚ-2020', title:'Рақамли иқтисодиёт тўғрисидаги Қонун', type:'qonun', soha:'tadbirkor',
+    status:'active', date:'3 июль 2020', updated:'20 ноябрь 2024',
+    chapters:[
+      { title:'I БОБ. Асосий тушунчалар',
+        articles:[
+          { num:'3-модда', title:'Рақамли иқтисодиёт тушунчаси', highlighted:false, noted:false, note:'',
+            text:'Рақамли иқтисодиёт — рақамли технологиялар асосида маҳсулот ва хизматларни ишлаб чиқариш, тарқатиш ва истеъмол қилишни ўз ичига оладиган иқтисодий фаолият тури.' },
+        ]
+      }
+    ]
+  },
+  { id:'ariza-f', code:'ПФ-6079', title:'Аризаларни кўриб чиқиш тартиби тўғрисидаги Фармон', type:'farmon', soha:'fuqaro', status:'active', date:'22 январь 2021', updated:'1 апрель 2024',
+    chapters:[{ title:'I БОБ', articles:[{ num:'1-модда', title:'Аризанома кўриш', highlighted:false, noted:false, note:'', text:'Ариза ва мурожаатлар белгиланган муддатларда кўриб чиқилади ва жавоб берилади. Умумий муддат 30 кундан ошмаслиги шарт.' }]}] },
+  { id:'invest-f', code:'ПФ-5495', title:'Инвестиция муҳитини яхшилаш чора-тадбирлари', type:'farmon', soha:'tadbirkor', status:'active', date:'18 июль 2017', updated:'12 декабрь 2024',
+    chapters:[{ title:'I БОБ', articles:[{ num:'1-модда', title:'Мақсадлар', highlighted:false, noted:false, note:'', text:'Хорижий инвесторлар учун қулай муҳит яратиш, маъмурий тўсиқларни камайтириш ва инвестиция жалб этишни рағбатлантириш.' }]}] },
+  { id:'mehnat-q', code:'ЎРҚ-1996', title:'Аҳолини иш билан таъминлаш тўғрисидаги Қонун', type:'qonun', soha:'mehnat', status:'amended', date:'13 январь 1996', updated:'20 феврал 2024',
+    chapters:[{ title:'I БОБ', articles:[{ num:'1-модда', title:'Иш билан таъминлаш', highlighted:false, noted:false, note:'', text:'Давлат аҳолини иш билан таъминлашга кўмаклашади, бандлик хизматлари орқали мутахассислар бозорини тартибга солади.' }]}] },
+  { id:'yer-q', code:'ЎРҚ-1998', title:'Ер Кодекси', type:'kodeks', soha:'fuqaro', status:'active', date:'30 апрель 1998', updated:'15 январь 2025',
+    chapters:[{ title:'I БОБ', articles:[{ num:'1-модда', title:'Ер муносабатлари', highlighted:false, noted:false, note:'', text:'Ер Ўзбекистон Республикасининг мулки ҳисобланади. Ердан фойдаланиш ва уни муҳофаза қилиш тартиби ушбу Кодекс билан белгиланади.' }]}] },
+  { id:'jinoyat-k', code:'ЖК-1994', title:'Жиноят Кодекси', type:'kodeks', soha:'jinoyat', status:'active', date:'22 сентябрь 1994', updated:'10 февраль 2025',
+    chapters:[{ title:'I БОБ. Умумий қоидалар', articles:[{ num:'1-модда', title:'Жиноят Кодексининг вазифалари', highlighted:false, noted:false, note:'', text:'Жиноят кодекси жиноий жазо сиёсатини белгилайди, жиноятлар ва уларга мос жазолар тизимини тартибга солади.' }, { num:'14-модда', title:'Жиноят тушунчаси', highlighted:false, noted:false, note:'', text:'Жиноят — жамиятга хавфли, Жиноят кодексида назарда тутилган, айбли равишда содир этилган, жиноий жазога сазовор ҳаракат ёки ҳаракатсизликдир.' }]}] },
+  { id:'soliq-f', code:'ПФ-5753', title:'2018-2021 йилларда солиқ тизимини такомиллаштириш', type:'farmon', soha:'soliq', status:'partial', date:'29 июнь 2017', updated:'1 январь 2022',
+    chapters:[{ title:'I БОБ', articles:[{ num:'1-модда', title:'Солиқ ислоҳотлари', highlighted:false, noted:false, note:'', text:'Солиқ ставкаларини камайтириш, солиқ маъмурчилигини соддалаштириш ва рақамли ҳисобот тизимига ўтиш чора-тадбирлари белгиланади.' }]}] },
+  { id:'pq-energetika', code:'ПҚ-2025', title:'Ёқилғи-энергетика тармоғини ривожлантириш чора-тадбирлари тўғрисида', type:'pq', soha:'energetika', status:'active', date:'10 январь 2025', updated:'10 январь 2025',
+    chapters:[{ title:'I БОБ. Умумий қоидалар', articles:[
+      { num:'1-модда', title:'Қарорнинг мақсади', highlighted:false, noted:false, note:'', text:'Мамлакат ёқилғи-энергетика тармоғини модернизация қилиш, энергия самарадорлигини ошириш ва қайта тикланувчи энергия манбаларидан фойдаланишни кенгайтириш.' },
+      { num:'5-модда', title:'Тарифлар', highlighted:false, noted:false, note:'', text:'Электр энергияси ва газ тарифлари босқичма-босқич бозор механизмлари асосида шакллантирилади.' }
+    ]}] },
+  { id:'vm-energetika', code:'ВМҚ-145', title:'Электр энергиясидан фойдаланиш қоидалари тўғрисида', type:'vm', soha:'energetika', status:'active', date:'5 март 2024', updated:'5 март 2024',
+    chapters:[{ title:'I БОБ', articles:[
+      { num:'1-модда', title:'Қоидаларнинг қўлланиш соҳаси', highlighted:false, noted:false, note:'', text:'Ушбу қоидалар электр энергиясини ишлаб чиқарувчи, узатувчи ва истеъмол қилувчи барча субъектларга нисбатан қўлланилади.' }
+    ]}] },
+  { id:'boshqa-yoriq', code:'ЙЎ-2023', title:'Идоралараро электрон ҳужжат айланиши йўриқномаси', type:'boshqa', soha:'tadbirkor', status:'active', date:'15 сентябрь 2023', updated:'1 январь 2025',
+    chapters:[{ title:'I БОБ', articles:[
+      { num:'1-модда', title:'Йўриқноманинг мақсади', highlighted:false, noted:false, note:'', text:'Давлат органлари ўртасида электрон ҳужжат алмашинуви тартибини белгилаш ва қоғозсиз иш юритишга ўтишни таъминлаш.' }
+    ]}] },
+];
+
+// ── DOCS — Supabase'dan yuklanadi yoki DEMO ──
+let docs = [];
+
+// ── SUPABASE: hujjatlar + moddalarni yuklash ──
+async function loadDocs() {
+  if (DEMO_MODE) {
+    docs = DEMO_DOCS;
+    showBanner('Demo rejim — Supabase ulanmagan. Hozir namuna ma\'lumotlar ko\'rsatilmoqda.', 'warn');
+    return;
+  }
+  try {
+    const { data: hujjatlar, error: e1 } = await db
+      .from('hujjatlar').select('*').order('tartib');
+    if (e1) throw e1;
+    const { data: moddalar, error: e2 } = await db
+      .from('moddalar').select('*').order('tartib');
+    if (e2) throw e2;
+
+    // Moddalarni hujjat + bob bo'yicha guruhlash
+    docs = hujjatlar.map(h => {
+      const docModdalar = moddalar.filter(m => m.hujjat_id === h.id);
+      const boblar = {};
+      docModdalar.forEach(m => {
+        const bob = m.bob_sarlavha || 'Умумий';
+        if (!boblar[bob]) boblar[bob] = [];
+        boblar[bob].push({
+          num: m.modda_num, title: m.sarlavha, text: m.matn,
+          highlighted: false, noted: false, note: ''
+        });
+      });
+      return {
+        id: h.id, code: h.kod, title: h.sarlavha, type: h.tur, soha: h.soha,
+        status: h.status, date: h.sana, updated: h.yangilangan,
+        chapters: Object.entries(boblar).map(([title, articles]) => ({ title, articles }))
+      };
+    });
+    showBanner('✅ Supabase ulandi — ' + docs.length + ' ta hujjat yuklandi', 'success');
+  } catch(err) {
+    console.error(err);
+    docs = DEMO_DOCS;
+    showBanner('⚠️ Supabase xatosi — demo ma\'lumotlar ishlatilmoqda. ' + (err.message||''), 'warn');
+  }
+}
+
+// ── SUPABASE: foydalanuvchi ma'lumotlarini yuklash ──
+async function loadUserData() {
+  if (DEMO_MODE || !db) return;
+  try {
+    const { data: izohlar } = await db.from('izohlar').select('modda_key, matn');
+    if (izohlar) izohlar.forEach(i => { notesMap[i.modda_key] = i.matn; });
+
+    const { data: belgi } = await db.from('belgilangan_moddalar').select('modda_key');
+    if (belgi) belgi.forEach(b => highlightedArts.add(b.modda_key));
+
+    const { data: saqla } = await db.from('saqlangan_hujjatlar').select('hujjat_id');
+    if (saqla) saqla.forEach(s => bookmarkedDocs.add(s.hujjat_id));
+  } catch(err) { console.error('User data:', err); }
+}
+
+// ── Banner ko'rsatish ──
+function showBanner(msg, type) {
+  let b = document.getElementById('statusBanner');
+  if (!b) {
+    b = document.createElement('div');
+    b.id = 'statusBanner';
+    b.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:300;padding:10px 20px;border-radius:8px;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,0.15);max-width:90%;text-align:center;';
+    document.body.appendChild(b);
+  }
+  b.textContent = msg;
+  b.style.background = type==='success' ? '#dceee2' : type==='warn' ? '#f0e6c0' : '#dce8f5';
+  b.style.color = type==='success' ? '#1a4a2a' : type==='warn' ? '#8a6d0b' : '#1a3a5c';
+  b.style.display = 'block';
+  setTimeout(()=>{ if(b) b.style.display='none'; }, 5000);
+}
+
+// ── STATE ──
+let currentDoc = null;
+let currentNoteArticle = null;
+let notesMap = {}; // artKey -> note text
+let highlightedArts = new Set();
+let bookmarkedDocs = new Set();
+let historyList = [];
+let activeFilters = {chips: ['active','amended','partial'], cat: 'all', soha: null};
+
+// ── RENDER DOC LIST ──
+function renderDocList() {
+  const list = document.getElementById('docList');
+  const q = document.getElementById('globalSearch').value.toLowerCase().trim();
+  let filtered = docs.filter(d => {
+    let ok = true;
+    if (activeFilters.cat === 'bookmarked') {
+      // Bookmark qilingan hujjatlar YOKI belgilangan moddasi bor hujjatlar
+      const hasBookmark = bookmarkedDocs.has(d.id);
+      const hasHighlight = [...highlightedArts].some(k => k.startsWith(d.id + '-'));
+      ok = hasBookmark || hasHighlight;
+    }
+    else if (activeFilters.cat === 'noted') ok = docs.some(dd => dd.id===d.id && dd.chapters.some(ch=>ch.articles.some(a=>notesMap[d.id+'-'+a.num])));
+    else if (activeFilters.cat === 'kodeks') ok = d.type==='kodeks';
+    else if (activeFilters.cat === 'qonun') ok = d.type==='qonun';
+    else if (activeFilters.cat === 'farmon') ok = d.type==='farmon';
+    else if (activeFilters.cat === 'qaror') ok = (d.type==='pq' || d.type==='vm');
+    else if (activeFilters.cat === 'pq') ok = d.type==='pq';
+    else if (activeFilters.cat === 'vm') ok = d.type==='vm';
+    else if (activeFilters.cat === 'boshqa') ok = !['kodeks','qonun','farmon','pq','vm'].includes(d.type);
+    if (activeFilters.soha) ok = ok && d.soha===activeFilters.soha;
+    if (activeFilters.chips.length && !activeFilters.chips.includes(d.status)) ok = false;
+    if (q) ok = ok && (d.title.toLowerCase().includes(q) || d.code.toLowerCase().includes(q) || d.chapters.some(c=>c.articles.some(a=>a.title.toLowerCase().includes(q)||a.text.toLowerCase().includes(q))));
+    return ok;
+  });
+  list.innerHTML = filtered.map((d,i)=>`
+    <div class="doc-card ${currentDoc&&currentDoc.id===d.id?'active':''}" onclick="openDoc('${d.id}')" style="animation-delay:${i*0.04}s">
+      <span class="doc-bookmark ${bookmarkedDocs.has(d.id)?'on':''}" onclick="toggleBookmark(event,'${d.id}')">🔖</span>
+      <div class="doc-code">${d.code}</div>
+      <div class="doc-title">${d.title}</div>
+      <div class="doc-meta">
+        <span class="doc-tag ${d.status==='active'?'tag-active':d.status==='amended'?'tag-amended':'tag-partial'}">${d.status==='active'?'Амалдаги':d.status==='amended'?'Ўзгартирилган':'Қисман'}</span>
+        <span class="doc-date">${d.date}</span>
+      </div>
+    </div>
+  `).join('');
+  updateCounts();
+}
+
+function updateCounts() {
+  // Белгиланганлар: bookmark қилинган ёки белгиланган моддаси бор ҳужжатлар
+  const bmDocs2 = new Set(bookmarkedDocs);
+  docs.forEach(d=>{
+    if (bookmarkedDocs.has(d.id)) bmDocs2.add(d.id);
+    if ([...highlightedArts].some(k=>k.startsWith(d.id+'-'))) bmDocs2.add(d.id);
+  });
+  document.getElementById('countBm').textContent = bmDocs2.size;
+  let notedCount = 0;
+  docs.forEach(d=>d.chapters.forEach(ch=>ch.articles.forEach(a=>{ if(notesMap[d.id+'-'+a.num]) notedCount++; })));
+  document.getElementById('countNoted').textContent = notedCount;
+  document.getElementById('countAll').textContent = docs.length;
+
+  // Тоифалар бўйича санаш
+  const cnt = t => docs.filter(d=>d.type===t).length;
+  const pq = cnt('pq'), vm = cnt('vm');
+  const setTxt = (id,n) => { const el=document.getElementById(id); if(el) el.textContent = n; };
+  setTxt('cntKodeks', cnt('kodeks'));
+  setTxt('cntQonun', cnt('qonun'));
+  setTxt('cntFarmon', cnt('farmon'));
+  setTxt('cntPq', pq);
+  setTxt('cntVm', vm);
+  setTxt('cntQaror', pq + vm);
+  setTxt('cntBoshqa', docs.filter(d=>!['kodeks','qonun','farmon','pq','vm'].includes(d.type)).length);
+}
+
+// ── Қарорлар гуруҳини очиш/ёпиш ──
+function toggleQarorGroup(e) {
+  if (e) e.stopPropagation();
+  const sub = document.getElementById('qarorSub');
+  const chevron = document.getElementById('qarorChevron');
+  const open = sub.style.display === 'none';
+  sub.style.display = open ? 'block' : 'none';
+  chevron.style.transform = open ? 'rotate(90deg)' : 'rotate(0deg)';
+  // Гуруҳни очганда барча қарорларни (ПҚ+ВМ) кўрсатиш
+  if (open) filterCat('qaror');
+}
+
+// ── OPEN DOC ──
+function openDoc(id) {
+  currentDoc = docs.find(d=>d.id===id);
+  if (!currentDoc) return;
+  if (!historyList.includes(currentDoc.title)) historyList.unshift(currentDoc.title);
+  if (historyList.length > 6) historyList.pop();
+  renderDocList();
+  renderReader();
+  // Мобилда автоматик равишда reader'ни кўрсатиш
+  mobileShowReader();
+  // Агар "Белгиланганлар" кўринишида бўлсак — белгиланган моддаларни очиб кўрсатиш
+  if (activeFilters.cat === 'bookmarked') {
+    setTimeout(()=>{
+      let first = null;
+      [...highlightedArts].forEach(key=>{
+        if (key.startsWith(id + '-')) {
+          const el = document.getElementById('art-' + key);
+          if (el) {
+            let parent = el.closest('.acc-bob, .acc-bolim');
+            while (parent) { parent.classList.add('acc-open'); parent = parent.parentElement?.closest('.acc-bob, .acc-bolim'); }
+            if (!first) first = el;
+          }
+        }
+      });
+      if (first) first.scrollIntoView({behavior:'smooth', block:'center'});
+    }, 150);
+  }
+}
+
+// ── МОБИЛ функциялари ──
+function toggleSidebar() {
+  const sb = document.querySelector('.sidebar');
+  const bd = document.getElementById('mobileBackdrop');
+  const isOpen = sb.classList.toggle('open');
+  bd.classList.toggle('open', isOpen);
+}
+function mobileShowReader() {
+  if (window.innerWidth > 768) return;
+  document.querySelector('.doc-list-panel')?.classList.remove('mobile-show');
+  document.querySelector('.reader-panel')?.classList.add('mobile-show');
+  // Sidebar очиқ бўлса — ёпиш
+  document.querySelector('.sidebar')?.classList.remove('open');
+  document.getElementById('mobileBackdrop')?.classList.remove('open');
+}
+function mobileShowList() {
+  document.querySelector('.reader-panel')?.classList.remove('mobile-show');
+  document.querySelector('.doc-list-panel')?.classList.add('mobile-show');
+}
+
+function scrollToDoc(id) {
+  openDoc(id);
+  window.scrollTo(0,0);
+}
+
+function renderReader() {
+  const d = currentDoc;
+  document.getElementById('readerEmpty').style.display = 'none';
+  const rc = document.getElementById('readerContent');
+  rc.style.display = 'block';
+  document.getElementById('readerToolbar').style.display = 'flex';
+  const histBar = document.getElementById('histBar');
+  histBar.style.display = 'flex';
+  document.getElementById('histItems').innerHTML = historyList.slice(0,5).map(h=>`<span class="hist-item" onclick="openDoc(docs.find(x=>x.title==='${h}')?.id)">${h}</span>`).join('');
+
+  // ── Иерархия қуриш: бўлим › боб › модда ──
+  // ch.title "I БЎЛИМ › 1-боб" каби бўлиши мумкин. Уни ажратамиз.
+  const tree = {};  // bolim -> { bob -> [articles] }
+  d.chapters.forEach(ch=>{
+    const parts = (ch.title||'').split('›').map(s=>s.trim());
+    let bolim, bob;
+    if (parts.length >= 2) { bolim = parts[0]; bob = parts.slice(1).join(' › '); }
+    else { bolim = ''; bob = ch.title || 'Умумий'; }
+    if (!tree[bolim]) tree[bolim] = {};
+    if (!tree[bolim][bob]) tree[bolim][bob] = [];
+    ch.articles.forEach(a=>tree[bolim][bob].push(a));
+  });
+
+  // ── Битта модда HTML'и ──
+  const renderArticle = (a) => {
+    const key = d.id+'-'+a.num;
+    const isHL = highlightedArts.has(key);
+    const hasNote = !!notesMap[key];
+    // Бандларни ажратиш: матндаги "•" ёки рақамли қаторлар
+    const textLines = (a.text||'').split('\n');
+    const mainLines = [];
+    const bands = [];
+    textLines.forEach(ln=>{
+      const t = ln.trim();
+      if (/^•\s/.test(t) || /^\d+(\.\d+)*\.\s/.test(t)) bands.push(t);
+      else if (t) mainLines.push(t);
+    });
+    const mainText = mainLines.join('<br>');
+    const bandHtml = bands.length ? `
+      <div class="band-toggle" onclick="toggleBand(event,'${key}')">▸ ${bands.length} та банд</div>
+      <div class="band-list" id="bands-${key}">
+        ${bands.map(b=>`<div class="band-item">${b}</div>`).join('')}
+      </div>` : '';
+
+    return `
+      <div class="article ${isHL?'highlighted':''} ${hasNote?'noted':''}" id="art-${key}" onclick="selectArticle('${key}','${a.num}')">
+        <div class="article-num">${a.num}</div>
+        <div class="article-title">${a.title||''}</div>
+        ${mainText ? `<div class="article-text">${mainText}</div>` : ''}
+        ${bandHtml}
+        ${hasNote ? `<div class="art-note-badge" onclick="editNote(event,'${key}','${a.num}')">🗒 ${notesMap[key].substring(0,40)}${notesMap[key].length>40?'…':''}</div>` : ''}
+        <div class="article-actions">
+          <button class="art-btn ${isHL?'active':''}" onclick="toggleHighlight(event,'${key}')">✨ ${isHL?'Белги олиш':'Белгилаш'}</button>
+          <button class="art-btn blue" onclick="openNoteFor(event,'${key}','${a.num}')">🗒 Изоҳ</button>
+          <button class="art-btn" onclick="sendToAI(event,'${a.num}','${(a.title||'').replace(/'/g,"\\'")}','${key}')">🤖 СИга юбориш</button>
+          <button class="art-btn" onclick="copyArt(event,'${a.num}','${(a.title||'').replace(/'/g,"\\'")}')">🔗 Нусха</button>
+        </div>
+      </div>`;
+  };
+
+  // ── Иерархияни HTML'га айлантириш ──
+  const bolimlar = Object.keys(tree);
+  // Агар умуман бўлим/боб йўқ бўлса (фақат бўш bolim), оддий рўйхат
+  const hasStructure = bolimlar.some(b=>b) || bolimlar.some(b=>Object.keys(tree[b]).some(bob=>bob!=='Умумий'));
+
+  let bodyHtml;
+  if (!hasStructure) {
+    // Тузилмасиз — оддий моддалар рўйхати
+    bodyHtml = Object.values(tree[''] || {}).flat().map(renderArticle).join('');
+  } else {
+    bodyHtml = bolimlar.map((bolim, bi)=>{
+      const boblar = Object.keys(tree[bolim]);
+      const moddaCount = boblar.reduce((s,bob)=>s+tree[bolim][bob].length,0);
+      const bobsHtml = boblar.map((bob, bbi)=>{
+        const arts = tree[bolim][bob];
+        return `
+          <div class="acc-bob ${bi===0&&bbi===0?'acc-open':''}">
+            <div class="acc-bob-head" onclick="toggleAcc(this.parentElement)">
+              <span class="acc-chevron">▸</span> ${bob}
+              <span class="acc-count">${arts.length}</span>
+            </div>
+            <div class="acc-bob-body">
+              ${arts.map(renderArticle).join('')}
+            </div>
+          </div>`;
+      }).join('');
+
+      // Агар бўлим номи бўш бўлса, фақат бобларни кўрсатамиз (бўлимсиз)
+      if (!bolim) return bobsHtml;
+
+      return `
+        <div class="acc-bolim ${bi===0?'acc-open':''}">
+          <div class="acc-bolim-head" onclick="toggleAcc(this.parentElement)">
+            <span class="acc-chevron">▸</span> ${bolim}
+            <span class="acc-count">${moddaCount}</span>
+          </div>
+          <div class="acc-bolim-body">
+            ${bobsHtml}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  rc.innerHTML = `
+    <div class="doc-header">
+      <div class="doc-header-code">${d.code}</div>
+      <div class="doc-header-title">${d.title}</div>
+      <div class="doc-header-meta">
+        <span>📅 Қабул қилинган: ${d.date}</span>
+        <span>🔄 Янгиланган: ${d.updated}</span>
+        <span class="doc-tag ${d.status==='active'?'tag-active':d.status==='amended'?'tag-amended':'tag-partial'}" style="font-size:11px">${d.status==='active'?'✅ Амалдаги':d.status==='amended'?'🔵 Ўзгартирилган':'🟡 Қисман'}</span>
+      </div>
+      ${hasStructure ? `<div style="margin-top:12px;display:flex;gap:8px;">
+        <button onclick="expandAll(true)" style="font-size:11.5px;padding:4px 12px;border:1px solid var(--border);background:#fff;border-radius:5px;cursor:pointer;color:var(--ink2)">⊕ Барчасини очиш</button>
+        <button onclick="expandAll(false)" style="font-size:11.5px;padding:4px 12px;border:1px solid var(--border);background:#fff;border-radius:5px;cursor:pointer;color:var(--ink2)">⊖ Барчасини йиғиш</button>
+      </div>` : ''}
+    </div>
+    ${bodyHtml}
+  `;
+}
+
+// ── Аккордеон очиш/ёпиш ──
+function toggleAcc(el) {
+  el.classList.toggle('acc-open');
+}
+
+function toggleBand(e, key) {
+  e.stopPropagation();
+  const list = document.getElementById('bands-' + key);
+  const toggle = e.currentTarget;
+  if (list) {
+    const open = list.classList.toggle('open');
+    toggle.innerHTML = (open ? '▾ ' : '▸ ') + toggle.textContent.replace(/^[▸▾]\s*/, '');
+  }
+}
+
+function expandAll(open) {
+  document.querySelectorAll('.acc-bolim, .acc-bob').forEach(el=>{
+    el.classList.toggle('acc-open', open);
+  });
+}
+
+// ── ARTICLE ACTIONS ──
+function selectArticle(key, num) {
+  currentNoteArticle = {key, num};
+  document.getElementById('noteContext').textContent = num + ' — ' + currentDoc?.title;
+  if (notesMap[key]) document.getElementById('noteText').value = notesMap[key];
+  else document.getElementById('noteText').value = '';
+}
+
+async function toggleHighlight(e, key) {
+  e.stopPropagation();
+  const adding = !highlightedArts.has(key);
+  if (adding) highlightedArts.add(key);
+  else highlightedArts.delete(key);
+  renderReader();
+  updateCounts();
+  if (!DEMO_MODE && db) {
+    try {
+      if (adding) await db.from('belgilangan_moddalar').insert({ modda_key: key });
+      else await db.from('belgilangan_moddalar').delete().eq('modda_key', key);
+    } catch(err) { console.error('Highlight save:', err); }
+  }
+}
+
+function openNoteFor(e, key, num) {
+  if (e) e.stopPropagation();
+  currentNoteArticle = {key: key||currentNoteArticle?.key, num: num||currentNoteArticle?.num};
+  if (currentNoteArticle?.key) {
+    document.getElementById('noteContext').textContent = currentNoteArticle.num + ' — ' + (currentDoc?.title||'');
+    document.getElementById('noteText').value = notesMap[currentNoteArticle.key]||'';
+  }
+  document.getElementById('notePanel').classList.add('open');
+  document.getElementById('aiPanel').classList.remove('open');
+  setTimeout(()=>document.getElementById('noteText').focus(),100);
+}
+
+function editNote(e, key, num) {
+  e.stopPropagation();
+  openNoteFor(null, key, num);
+}
+
+async function saveNote() {
+  if (!currentNoteArticle) return;
+  const txt = document.getElementById('noteText').value.trim();
+  const key = currentNoteArticle.key;
+  if (txt) notesMap[key] = txt;
+  else delete notesMap[key];
+  renderSavedNotes();
+  renderReader();
+  updateCounts();
+  const btn = document.querySelector('.note-save-btn');
+  const orig = btn.textContent;
+  btn.textContent = '✅ Сақланди!';
+  btn.style.background = 'var(--green)';
+  setTimeout(()=>{ btn.textContent=orig; btn.style.background=''; },1500);
+  if (!DEMO_MODE && db) {
+    try {
+      if (txt) {
+        await db.from('izohlar').delete().eq('modda_key', key);
+        await db.from('izohlar').insert({ modda_key: key, matn: txt });
+      } else {
+        await db.from('izohlar').delete().eq('modda_key', key);
+      }
+    } catch(err) { console.error('Note save:', err); }
+  }
+}
+
+function renderSavedNotes() {
+  const el = document.getElementById('savedNotes');
+  const entries = Object.entries(notesMap);
+  if (!entries.length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div style="font-size:11px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--ink3);padding:0 0 8px">Барча изоҳлар</div>' +
+    entries.map(([k,v])=>`
+      <div class="saved-note-item">
+        <div class="saved-note-art">${k.split('-').slice(1).join('-')}</div>
+        <div class="saved-note-text">${v}</div>
+      </div>
+    `).join('');
+}
+
+function sendToAI(e, num, title, key) {
+  e.stopPropagation();
+  document.getElementById('aiPanel').classList.add('open');
+  document.getElementById('notePanel').classList.remove('open');
+  document.getElementById('aiToggleBtn').classList.add('active');
+  // Модда матнини топиш
+  let artText = '';
+  let docTitle = currentDoc ? currentDoc.title : '';
+  if (currentDoc) {
+    currentDoc.chapters.forEach(ch=>ch.articles.forEach(a=>{
+      if (a.num === num) artText = a.text;
+    }));
+  }
+  const q = `«${docTitle}» ҳужжатининг ${num} (${title}) моддасини таҳлил қилинг, соддалаштирилган тилда тушунтиринг ва амалий тавсиялар беринг.`;
+  processAI(q, { docTitle, num, title, text: artText });
+}
+
+function copyArt(e, num, title) {
+  e.stopPropagation();
+  const url = window.location.href + '#' + num.replace(/\s/g,'-');
+  navigator.clipboard?.writeText(url).catch(()=>{});
+  showTooltip(e, '✅ Ҳавола нусхаланди!');
+}
+
+function showTooltip(e, msg) {
+  const t = document.getElementById('tooltip');
+  t.textContent = msg;
+  t.style.display = 'block';
+  t.style.left = (e.clientX+12)+'px';
+  t.style.top = (e.clientY-8)+'px';
+  setTimeout(()=>{ t.style.display='none'; },2000);
+}
+
+// ── HIGHLIGHT ALL ──
+function highlightSelected() {
+  if (!currentDoc) return;
+  alert('Бир ёки бир нечта моддани танлаб "Белгилаш" тугмасини босинг.');
+}
+
+// ── BOOKMARK ──
+async function toggleBookmark(e, id) {
+  e.stopPropagation();
+  const adding = !bookmarkedDocs.has(id);
+  if (adding) bookmarkedDocs.add(id);
+  else bookmarkedDocs.delete(id);
+  renderDocList();
+  if (!DEMO_MODE && db) {
+    try {
+      if (adding) await db.from('saqlangan_hujjatlar').insert({ hujjat_id: id });
+      else await db.from('saqlangan_hujjatlar').delete().eq('hujjat_id', id);
+    } catch(err) { console.error('Bookmark save:', err); }
+  }
+}
+
+// ── FILTER ──
+function filterCat(cat) {
+  activeFilters.cat = cat;
+  activeFilters.soha = null;
+  document.querySelectorAll('.sidebar-item').forEach(el=>{
+    el.classList.remove('active');
+    const oc = el.getAttribute('onclick') || '';
+    if (oc.includes(`'${cat}'`)) el.classList.add('active');
+    // "Қарорлар" гуруҳи toggleQarorGroup ишлатади, шунинг учун алоҳида
+    if (cat === 'qaror' && oc.includes('toggleQarorGroup')) el.classList.add('active');
+  });
+  document.getElementById('panelTitle').textContent = {all:'Барча ҳужжатлар',bookmarked:'Белгиланганлар',noted:'Изоҳли моддалар',kodeks:'Кодекслар',qonun:'Қонунлар',farmon:'Фармонлар',qaror:'Қарорлар',pq:'ПҚ (Президент қарори)',vm:'Вазирлар маҳкамаси қарори',boshqa:'Бошқалар'}[cat]||'';
+  renderDocList();
+}
+
+function filterSoha(soha) {
+  activeFilters.soha = soha;
+  activeFilters.cat = 'all';
+  document.querySelectorAll('.sidebar-item').forEach(el=>el.classList.remove('active'));
+  document.getElementById('panelTitle').textContent = {fuqaro:'Фуқаролик ҳуқуқи',mehnat:'Меҳнат ҳуқуқи',soliq:'Солиқ ҳуқуқи',tadbirkor:'Тадбиркорлик',jinoyat:'Жиноят ҳуқуқи',energetika:'Ёқилғи энергетика'}[soha]||soha;
+  renderDocList();
+}
+
+function toggleChip(el, val) {
+  el.classList.toggle('on');
+  if (el.classList.contains('on')) activeFilters.chips.push(val);
+  else activeFilters.chips = activeFilters.chips.filter(c=>c!==val);
+  renderDocList();
+}
+
+function globalSearchFn(q) {
+  renderDocList();
+  showSearchResults(q);
+}
+
+// ── ҚИДИРУВ НАТИЖАЛАРИ ДРОПДАУНИ ──
+function showSearchResults(q) {
+  const box = document.getElementById('searchResults');
+  q = (q||'').toLowerCase().trim();
+  if (q.length < 2) { box.style.display = 'none'; return; }
+
+  // Барча моддалар бўйича қидириш
+  const results = [];
+  docs.forEach(d=>{
+    // Ҳужжат номи мос келса
+    const docMatch = d.title.toLowerCase().includes(q) || d.code.toLowerCase().includes(q);
+    d.chapters.forEach(ch=>{
+      ch.articles.forEach(a=>{
+        const numMatch = a.num.toLowerCase().includes(q);
+        const titleMatch = (a.title||'').toLowerCase().includes(q);
+        const textMatch = (a.text||'').toLowerCase().includes(q);
+        if (docMatch || numMatch || titleMatch || textMatch) {
+          results.push({ doc:d, art:a, ch:ch, score: (numMatch?3:0)+(titleMatch?2:0)+(textMatch?1:0)+(docMatch?1:0) });
+        }
+      });
+    });
+  });
+  results.sort((a,b)=>b.score-a.score);
+
+  if (!results.length) {
+    box.innerHTML = '<div style="padding:18px;text-align:center;color:var(--ink3);font-size:13px;">Ҳеч нарса топилмади</div>';
+    box.style.display = 'block';
+    return;
+  }
+
+  // Матндан мос келган қисмни ажратиб кўрсатиш
+  const highlight = (text, query) => {
+    if (!text) return '';
+    const idx = text.toLowerCase().indexOf(query);
+    if (idx < 0) return text.substring(0,90) + (text.length>90?'…':'');
+    const start = Math.max(0, idx-30);
+    const snippet = (start>0?'…':'') + text.substring(start, idx+query.length+50) + '…';
+    const re = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')', 'gi');
+    return snippet.replace(re, '<mark style="background:#f0e6c0;color:#8a6d0b;padding:0 2px;border-radius:2px;">$1</mark>');
+  };
+
+  box.innerHTML = '<div style="padding:8px 14px;font-size:11px;color:var(--ink3);border-bottom:1px solid var(--border);">' + results.length + ' та натижа топилди</div>' +
+    results.slice(0,30).map(r=>`
+      <div onclick="goToResult('${r.doc.id}','${r.art.num.replace(/'/g,"\\'")}')" style="padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.12s;" onmouseover="this.style.background='var(--gold-pale)'" onmouseout="this.style.background='#fff'">
+        <div style="font-size:11px;color:var(--gold);font-family:'IBM Plex Mono',monospace;margin-bottom:3px;">${r.doc.code} · ${r.art.num}</div>
+        <div style="font-size:13px;font-weight:500;color:var(--ink);margin-bottom:3px;">${highlight(r.art.title||r.doc.title, q)}</div>
+        <div style="font-size:12px;color:var(--ink2);line-height:1.5;">${highlight(r.art.text, q)}</div>
+      </div>
+    `).join('');
+  box.style.display = 'block';
+}
+
+// ── Очиқ ҳужжат ичида қидириш ──
+function searchInDoc(q) {
+  q = (q||'').toLowerCase().trim();
+  const countEl = document.getElementById('inDocCount');
+  const articles = document.querySelectorAll('#readerContent .article');
+
+  if (!q) {
+    articles.forEach(a=>{ a.style.display = ''; a.style.boxShadow = ''; });
+    if (countEl) countEl.textContent = '';
+    return;
+  }
+
+  let found = 0;
+  articles.forEach(a=>{
+    const text = a.textContent.toLowerCase();
+    if (text.includes(q)) {
+      found++;
+      a.style.display = '';
+      a.style.boxShadow = '0 0 0 2px var(--gold)';
+      let parent = a.closest('.acc-bob, .acc-bolim');
+      while (parent) { parent.classList.add('acc-open'); parent = parent.parentElement?.closest('.acc-bob, .acc-bolim'); }
+    } else {
+      a.style.display = 'none';
+      a.style.boxShadow = '';
+    }
+  });
+  if (countEl) {
+    countEl.textContent = found ? found + ' та топилди' : 'топилмади';
+    countEl.style.color = found ? 'var(--green)' : 'var(--red)';
+  }
+}
+
+function goToResult(docId, artNum) {
+  document.getElementById('searchResults').style.display = 'none';
+  document.getElementById('globalSearch').value = '';
+  renderDocList();
+  openDoc(docId);
+  // Моддага скролл ва ёритиш
+  setTimeout(()=>{
+    const key = docId + '-' + artNum;
+    const el = document.getElementById('art-' + key);
+    if (el) {
+      // Модда яширин аккордеонда бўлса — ота-аккордеонларни очиш
+      let parent = el.closest('.acc-bob, .acc-bolim');
+      while (parent) {
+        parent.classList.add('acc-open');
+        parent = parent.parentElement?.closest('.acc-bob, .acc-bolim');
+      }
+      el.scrollIntoView({behavior:'smooth', block:'center'});
+      el.style.transition = 'background 0.3s';
+      const orig = el.style.background;
+      el.style.background = '#faf6ea';
+      el.style.boxShadow = '0 0 0 2px var(--gold)';
+      setTimeout(()=>{ el.style.background=orig; el.style.boxShadow=''; }, 2000);
+    }
+  }, 250);
+}
+
+// Қидирув майдонидан ташқарига босилганда дропдаунни ёпиш
+document.addEventListener('click', (e)=>{
+  if (!e.target.closest('.search-wrap')) {
+    const box = document.getElementById('searchResults');
+    if (box) box.style.display = 'none';
+  }
+});
+
+// ── PANELS ──
+function toggleNote() {
+  const p = document.getElementById('notePanel');
+  const isOpen = p.classList.toggle('open');
+  document.getElementById('aiPanel').classList.remove('open');
+  document.getElementById('noteToggleBtn').classList.toggle('active', isOpen);
+  renderSavedNotes();
+}
+
+function toggleAI() {
+  const p = document.getElementById('aiPanel');
+  const isOpen = p.classList.toggle('open');
+  document.getElementById('notePanel').classList.remove('open');
+  document.getElementById('aiToggleBtn').classList.toggle('active', isOpen);
+}
+
+// ── AI ──
+// ════════════════════════════════════════════════════════
+//  СИ ЁРДАМЧИ — Claude API интеграцияси
+// ════════════════════════════════════════════════════════
+let aiHistory = [];   // суҳбат тарихи
+
+// Очиқ ҳужжатдан контекст тайёрлаш (СИ аниқ жавоб бериши учун)
+function buildContext(extraArt) {
+  let ctx = '';
+  if (extraArt && extraArt.text) {
+    ctx += `Жорий модда:\n${extraArt.docTitle} — ${extraArt.num}. ${extraArt.title}\n${extraArt.text}\n\n`;
+  } else if (currentDoc) {
+    // Очиқ ҳужжатнинг барча моддаларини контекстга қўшиш (40 моддагача)
+    ctx += `Очиқ ҳужжат: ${currentDoc.title} (${currentDoc.code})\n\n`;
+    let cnt = 0;
+    currentDoc.chapters.forEach(ch=>{
+      ch.articles.forEach(a=>{
+        if (cnt < 40) {
+          ctx += `${a.num}. ${a.title||''}\n${a.text}\n\n`;
+          cnt++;
+        }
+      });
+    });
+  }
+  return ctx.substring(0, 12000);  // токен чегараси учун
+}
+
+async function processAI(question, extraArt) {
+  const msgs = document.getElementById('aiMessages');
+
+  // Фойдаланувчи хабарини кўрсатиш
+  const userDiv = document.createElement('div');
+  userDiv.className = 'ai-msg user';
+  userDiv.textContent = question;
+  msgs.appendChild(userDiv);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  // "Ёзмоқда..." индикатори
+  const botDiv = document.createElement('div');
+  botDiv.className = 'ai-msg bot';
+  botDiv.innerHTML = '<span style="opacity:0.6">✦ Ўйламоқда...</span>';
+  msgs.appendChild(botDiv);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  const context = buildContext(extraArt);
+  const systemPrompt = `Сиз LexUz — Ўзбекистон қонунчилиги бўйича юридик ёрдамчисиз. Фойдаланувчига қонун, кодекс, қарор ва уларнинг модда ҳамда бандлари бўйича ёрдам берасиз.
+
+Қоидалар:
+- Фақат ўзбек тилида (кирилл) жавоб беринг.
+- Берилган ҳужжат матнига таяниб, аниқ ва амалий жавоб беринг.
+- Жавобни тузилмали қилинг: аввал моддани соддалаштириб тушунтиринг, кейин амалий таҳлил, охирида тавсиялар.
+- Агар саволга жавоб берилган контекстда йўқ бўлса, буни очиқ айтинг ва умумий маълумот беринг.
+- Жавоб охирида қисқа эслатма: бу расмий юридик маслаҳат эмаслигини билдиринг.
+- Муҳим жойларни <strong>...</strong> билан белгиланг (HTML).
+
+${context ? 'Қуйидаги ҳужжат матнига таяниб жавоб беринг:\n\n' + context : ''}`;
+
+  // Суҳбат тарихига қўшиш
+  aiHistory.push({ role: 'user', content: question });
+
+  try {
+    let answer = '';
+
+    // ── 1-УСУЛ: Supabase Edge Function (хавфсиз — калит серверда) ──
+    if (!DEMO_MODE && SUPABASE_URL && !SUPABASE_URL.includes('SIZNING')) {
+      const edgeUrl = SUPABASE_URL.replace(/\/$/, '') + '/functions/v1/si-yordamchi';
+      const response = await fetch(edgeUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + SUPABASE_KEY
+        },
+        body: JSON.stringify({
+          system: systemPrompt,
+          messages: aiHistory.slice(-6)
+        })
+      });
+      if (!response.ok) throw new Error('Edge Function хатоси: ' + response.status);
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+      answer = (data.answer || '').trim();
+      if (!answer) throw new Error('Бўш жавоб келди');
+    }
+    // ── 2-УСУЛ: тўғридан-тўғри Gemini (калит браузерда — фақат шахсий фойдаланиш) ──
+    else if (GEMINI_API_KEY && !GEMINI_API_KEY.includes('SIZNING')) {
+      const geminiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+      const contents = aiHistory.slice(-6).map(m=>({
+        role: m.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: m.content }]
+      }));
+      const response = await fetch(geminiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: contents,
+          generationConfig: { maxOutputTokens: 1500, temperature: 0.4 }
+        })
+      });
+      if (!response.ok) {
+        const errTxt = await response.text();
+        throw new Error('Gemini хатоси: ' + response.status + ' ' + errTxt.substring(0,150));
+      }
+      const data = await response.json();
+      answer = (data.candidates?.[0]?.content?.parts || []).map(p=>p.text).join('\n').trim();
+      if (!answer) throw new Error('Бўш жавоб келди');
+    }
+    // ── 3-УСУЛ: claude.ai ичида синов (демо) ──
+    else {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1500,
+          system: systemPrompt,
+          messages: aiHistory.slice(-6)
+        })
+      });
+      if (!response.ok) throw new Error('API хатоси: ' + response.status);
+      const data = await response.json();
+      answer = data.content.filter(b=>b.type==='text').map(b=>b.text).join('\n').trim();
+    }
+
+    aiHistory.push({ role: 'assistant', content: answer });
+
+    botDiv.innerHTML = answer.replace(/\n/g, '<br>') +
+      '<br><br><em style="opacity:0.5;font-size:11px">⚠️ Бу расмий юридик маслаҳат эмас.</em>';
+    msgs.scrollTop = msgs.scrollHeight;
+  } catch(err) {
+    botDiv.innerHTML = '<span style="color:#f5c4b3">⚠️ СИ Ёрдамчи ҳозир ишламаяпти.<br><br>Хато: ' + err.message + '<br><br>Edge Function ёки GEMINI_API_KEY созланганини текширинг.</span>';
+    aiHistory.pop();
+  }
+}
+
+function sendAI() {
+  const inp = document.getElementById('aiInput');
+  const q = inp.value.trim();
+  if (!q) return;
+  inp.value = '';
+  processAI(q);
+}
+
+function setView(v) {
+  document.querySelectorAll('.tb-btn').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  if (v==='bookmarks') filterCat('bookmarked');
+  else filterCat('all');
+}
+
+function exportPDF() { alert('PDF экспорт функцияси иш режимида...'); }
+function copyLink() {
+  if (!currentDoc) return;
+  navigator.clipboard?.writeText(window.location.href+'#'+currentDoc.id).catch(()=>{});
+  showTooltip({clientX:window.innerWidth/2,clientY:60},'✅ Ҳавола нусхаланди!');
+}
+
+// ════════════════════════════════════════════════════════
+//  ҲУЖЖАТ ҚЎШИШ / ТАҲРИРЛАШ ФУНКЦИЯЛАРИ
+// ════════════════════════════════════════════════════════
+let moddaCounter = 0;
+let editMode = false;   // false = yangi qo'shish, true = tahrirlash
+
+function openAddDoc() {
+  editMode = false;
+  document.getElementById('addDocOverlay').style.display = 'flex';
+  document.getElementById('moddaRows').innerHTML = '';
+  document.getElementById('addDocTitle').textContent = '➕ Янги ҳужжат қўшиш';
+  document.getElementById('adId').disabled = false;
+  moddaCounter = 0;
+  addModdaRow();
+  document.getElementById('addDocError').style.display = 'none';
+  ['adKod','adId','adSarlavha','adSana','adYangilangan'].forEach(id=>document.getElementById(id).value='');
+}
+
+function editCurrentDoc() {
+  if (!currentDoc) return;
+  editMode = true;
+  const d = currentDoc;
+  document.getElementById('addDocOverlay').style.display = 'flex';
+  document.getElementById('addDocTitle').textContent = '✏️ Ҳужжатни таҳрирлаш';
+  document.getElementById('adId').value = d.id;
+  document.getElementById('adId').disabled = true;   // ID o'zgartirilmaydi
+  document.getElementById('adKod').value = d.code;
+  document.getElementById('adSarlavha').value = d.title;
+  document.getElementById('adTur').value = d.type;
+  document.getElementById('adSoha').value = d.soha;
+  document.getElementById('adStatus').value = d.status;
+  document.getElementById('adSana').value = d.date==='—'?'':d.date;
+  document.getElementById('adYangilangan').value = d.updated==='—'?'':d.updated;
+  document.getElementById('addDocError').style.display = 'none';
+  // Mavjud moddalarni yuklash
+  document.getElementById('moddaRows').innerHTML = '';
+  moddaCounter = 0;
+  d.chapters.forEach(ch=>ch.articles.forEach(a=>{
+    addModdaRow(a.num, a.title, ch.title, a.text);
+  }));
+  if (!moddaCounter) addModdaRow();
+}
+
+function addArticleToCurrentDoc() {
+  editCurrentDoc();
+  addModdaRow();
+  // Oxirgi qo'shilgan qatorga skroll
+  const rows = document.querySelectorAll('#moddaRows .modda-row');
+  rows[rows.length-1]?.scrollIntoView({behavior:'smooth'});
+}
+
+function closeAddDoc() {
+  document.getElementById('addDocOverlay').style.display = 'none';
+}
+
+function addModdaRow(num, title, bob, text) {
+  moddaCounter++;
+  const div = document.createElement('div');
+  div.className = 'modda-row';
+  div.id = 'modda-' + moddaCounter;
+  const esc = s => (s||'').replace(/"/g,'&quot;');
+  div.innerHTML = `
+    <button class="modda-row-del" onclick="this.parentElement.remove()">✕</button>
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:10px;margin-bottom:8px;">
+      <input class="adf-input md-num" placeholder="1-модда" value="${esc(num)}">
+      <input class="adf-input md-title" placeholder="Модда сарлавҳаси" value="${esc(title)}">
+    </div>
+    <input class="adf-input md-bob" placeholder="Боб (масалан: I БОБ. Умумий қоидалар)" style="margin-bottom:8px;" value="${esc(bob)}">
+    <textarea class="adf-input md-text" placeholder="Модда матни..." style="min-height:60px;resize:vertical;line-height:1.5;">${(text||'').replace(/</g,'&lt;')}</textarea>
+    <div style="margin-top:6px;display:flex;align-items:center;gap:8px;">
+      <span style="font-size:11px;color:var(--ink3)">Бошқа моддага ҳавола:</span>
+      <select class="md-ref-doc" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--paper);color:var(--ink2);max-width:160px;">
+        <option value="">— ҳужжат танланг —</option>
+      </select>
+      <input class="md-ref-text" placeholder="кўринадиган матн (масалан ФК 5-модда)" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;background:var(--paper);color:var(--ink2);flex:1;">
+      <button onclick="insertRef(this)" style="font-size:11px;padding:3px 10px;border:1px solid var(--blue);background:var(--blue-light);color:var(--blue);border-radius:4px;cursor:pointer;white-space:nowrap;">🔗 Қўшиш</button>
+    </div>
+  `;
+  document.getElementById('moddaRows').appendChild(div);
+  // Havola uchun hujjatlar ro'yxatini to'ldirish
+  const sel = div.querySelector('.md-ref-doc');
+  docs.forEach(d=>{
+    const opt = document.createElement('option');
+    opt.value = d.id; opt.textContent = d.code + ' — ' + d.title.substring(0,30);
+    sel.appendChild(opt);
+  });
+}
+
+async function saveNewDoc() {
+  const err = document.getElementById('addDocError');
+  const id = document.getElementById('adId').value.trim();
+  const kod = document.getElementById('adKod').value.trim();
+  const sarlavha = document.getElementById('adSarlavha').value.trim();
+
+  if (!id || !kod || !sarlavha) {
+    err.textContent = '⚠️ ID, код ва ном тўлдирилиши шарт!';
+    err.style.display = 'block';
+    return;
+  }
+  if (!/^[a-z0-9-]+$/.test(id)) {
+    err.textContent = '⚠️ ID фақат лотин ҳарфлари, рақамлар ва тире (-) дан иборат бўлсин (бўш жойсиз).';
+    err.style.display = 'block';
+    return;
+  }
+  // Yangi qo'shishda ID takrorlanmasligini tekshirish (edit'da o'tkazib yuboriladi)
+  if (!editMode && docs.some(d=>d.id===id)) {
+    err.textContent = '⚠️ Бу ID аллақачон мавжуд. Бошқа ID танланг.';
+    err.style.display = 'block';
+    return;
+  }
+
+  const hujjat = {
+    id, kod, sarlavha,
+    tur: document.getElementById('adTur').value,
+    soha: document.getElementById('adSoha').value,
+    status: document.getElementById('adStatus').value,
+    sana: document.getElementById('adSana').value.trim() || '—',
+    yangilangan: document.getElementById('adYangilangan').value.trim() || '—',
+    tartib: editMode ? (docs.find(d=>d.id===id)?.tartib || docs.length) : docs.length + 1
+  };
+
+  // Moddalarni yig'ish
+  const moddalar = [];
+  let tartib = 0;
+  document.querySelectorAll('#moddaRows .modda-row').forEach(row=>{
+    const num = row.querySelector('.md-num').value.trim();
+    const title = row.querySelector('.md-title').value.trim();
+    const bob = row.querySelector('.md-bob').value.trim() || 'Умумий';
+    const text = row.querySelector('.md-text').value.trim();
+    if (num && text) {
+      tartib++;
+      moddalar.push({ hujjat_id: id, bob_sarlavha: bob, modda_num: num, sarlavha: title, matn: text, tartib });
+    }
+  });
+
+  if (!moddalar.length) {
+    err.textContent = '⚠️ Камида битта модда қўшинг (модда рақами ва матни тўлдирилсин).';
+    err.style.display = 'block';
+    return;
+  }
+
+  const btn = document.getElementById('adSaveBtn');
+  btn.textContent = '⏳ Сақланмоқда...';
+  btn.disabled = true;
+
+  // Supabase'ga saqlash
+  if (!DEMO_MODE && db) {
+    try {
+      if (editMode) {
+        // Tahrirlash: hujjatni yangilash, eski moddalarni o'chirib qaytadan qo'shish
+        const { error: eu } = await db.from('hujjatlar').update(hujjat).eq('id', id);
+        if (eu) throw eu;
+        const { error: ed } = await db.from('moddalar').delete().eq('hujjat_id', id);
+        if (ed) throw ed;
+        const { error: ei } = await db.from('moddalar').insert(moddalar);
+        if (ei) throw ei;
+      } else {
+        const { error: e1 } = await db.from('hujjatlar').insert(hujjat);
+        if (e1) throw e1;
+        const { error: e2 } = await db.from('moddalar').insert(moddalar);
+        if (e2) throw e2;
+      }
+    } catch(e) {
+      err.textContent = '❌ Supabase хатоси: ' + e.message;
+      err.style.display = 'block';
+      btn.textContent = '💾 Сақлаш';
+      btn.disabled = false;
+      return;
+    }
+  }
+
+  // Mahalliy docs massivini yangilash
+  const boblar = {};
+  moddalar.forEach(m=>{
+    if (!boblar[m.bob_sarlavha]) boblar[m.bob_sarlavha] = [];
+    boblar[m.bob_sarlavha].push({ num: m.modda_num, title: m.sarlavha, text: m.matn, highlighted:false, noted:false, note:'' });
+  });
+  const yangiDoc = {
+    id, code:kod, title:sarlavha, type:hujjat.tur, soha:hujjat.soha,
+    status:hujjat.status, date:hujjat.sana, updated:hujjat.yangilangan,
+    chapters: Object.entries(boblar).map(([title,articles])=>({title,articles}))
+  };
+  if (editMode) {
+    const idx = docs.findIndex(d=>d.id===id);
+    if (idx>=0) docs[idx] = yangiDoc;
+  } else {
+    docs.push(yangiDoc);
+  }
+
+  btn.textContent = '💾 Сақлаш';
+  btn.disabled = false;
+  closeAddDoc();
+  renderDocList();
+  openDoc(id);
+  showBanner((editMode?'✅ "':'✅ "') + sarlavha + (editMode?'" янгиланди!':'" қўшилди!') + (DEMO_MODE ? ' (демо)' : ''), 'success');
+}
+
+// ════════════════════════════════════════════════════════
+//  ТЕЗ КИРИТИШ — матнни автоматик моддаларга ажратиш
+// ════════════════════════════════════════════════════════
+function toggleBulkPanel() {
+  const p = document.getElementById('bulkPanel');
+  const open = p.style.display === 'none';
+  p.style.display = open ? 'block' : 'none';
+  document.getElementById('bulkToggleBtn').style.background = open ? '#185fa5' : 'var(--blue-light)';
+  document.getElementById('bulkToggleBtn').style.color = open ? '#fff' : 'var(--blue)';
+  if (open) document.getElementById('bulkText').focus();
+}
+
+function parseBulkText() {
+  const raw = document.getElementById('bulkText').value;
+  const resultEl = document.getElementById('bulkResult');
+  if (!raw.trim()) { resultEl.textContent = '⚠️ Аввал матн киритинг.'; return; }
+
+  const lines = raw.split('\n');
+
+  const parsed = [];        // { num, title, bob, text }
+  let currentBolim = '';
+  let currentBob = '';
+  let bolimCount = 0, bobCount = 0, bandCount = 0;
+  let cur = null;
+  let moddaKorildi = false;   // модда учраганми? (соф қарорни ажратиш учун)
+
+  const flush = () => { if (cur) { parsed.push(cur); cur = null; } };
+
+  // ── Автоматик таниш учун шаблонлар (белгисиз хом матн учун) ──
+  // Бўлим: "I БЎЛИМ", "1-БЎЛИМ", "БИРИНЧИ БЎЛИМ"
+  const reBolimRaw = /^([IVXLCDM]+|\d+[-‒–—]?|[А-ЯЁЎҚҒҲ]+)\s*[-‒–—]?\s*(БЎЛИМ|бўлим)/i;
+  // Боб: "I БОБ", "1-боб", "1 боб"
+  const reBobRaw = /^([IVXLCDM]+|\d+)\s*[-‒–—]?\s*(БОБ|боб|Боб)/i;
+  // Модда: "1-модда", "12-модда"
+  const reModdaRaw = /^(\d+(?:[-‒–—]\d+)?)\s*[-‒–—]?\s*модда/i;
+  // Рақамли банд: "55." yoки "55)" yоки "1.2." (қарорларда кўп учрайди)
+  const reBandNum = /^(\d+(?:\.\d+)*)\s*[.)]\s+(.+)/;
+
+  // Модда сарлавҳа+рақамни ажратиш ёрдамчиси
+  function splitModda(body) {
+    const mm = body.match(reModdaRaw);
+    if (mm) {
+      const num = mm[1] + '-модда';
+      const title = body.replace(reModdaRaw, '').replace(/^[.\s—–-]+/, '').trim();
+      return { num, title };
+    }
+    return { num: (body.split(/[.\s]/)[0] || 'модда'), title: body };
+  }
+
+  for (let rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+
+    // ═══ 1. БЕЛГИЛИ РЕЖИМ (### ## #) ═══
+    if (/^###\s+/.test(line)) {
+      flush();
+      const { num, title } = splitModda(line.replace(/^###\s+/, '').trim());
+      cur = { num, title, bob: [currentBolim, currentBob].filter(Boolean).join(' › '), text: '' };
+      moddaKorildi = true;
+      continue;
+    }
+    if (/^##\s+/.test(line)) {
+      flush(); currentBob = line.replace(/^##\s+/, '').trim(); bobCount++; continue;
+    }
+    if (/^#\s+/.test(line)) {
+      flush(); currentBolim = line.replace(/^#\s+/, '').trim(); currentBob = ''; bolimCount++; continue;
+    }
+
+    // ═══ 2. АВТОМАТИК ТАНИШ (белгисиз хом матн) ═══
+    // Бўлим (белгисиз)
+    if (reBolimRaw.test(line) && line.length < 80) {
+      flush(); currentBolim = line; currentBob = ''; bolimCount++; continue;
+    }
+    // Боб (белгисиз)
+    if (reBobRaw.test(line) && line.length < 80) {
+      flush(); currentBob = line; bobCount++; continue;
+    }
+    // Модда (белгисиз)
+    if (reModdaRaw.test(line)) {
+      flush();
+      const { num, title } = splitModda(line);
+      cur = { num, title, bob: [currentBolim, currentBob].filter(Boolean).join(' › '), text: '' };
+      moddaKorildi = true;
+      continue;
+    }
+
+    // ═══ 3. БАНДЛАР ═══
+    // Белгили банд: "- матн" yоки "• матн"
+    if (/^[-*•]\s+/.test(line) && cur) {
+      cur.text += (cur.text ? '\n' : '') + '• ' + line.replace(/^[-*•]\s+/, '').trim();
+      bandCount++; continue;
+    }
+    // Рақамли банд: "55. матн" yоки "1) матн" yоки "1.2. матн"
+    const bandM = line.match(reBandNum);
+    if (bandM) {
+      if (moddaKorildi && cur) {
+        // Модда ичида — банд сифатида модда матнига қўшилади
+        cur.text += (cur.text ? '\n' : '') + bandM[1] + '. ' + bandM[2].trim();
+        bandCount++; continue;
+      } else {
+        // Соф қарор (модда йўқ) — ҳар бир рақамли банд алоҳида ёзув
+        flush();
+        cur = {
+          num: bandM[1] + '-банд',
+          title: '',
+          bob: [currentBolim, currentBob].filter(Boolean).join(' › '),
+          text: bandM[2].trim()
+        };
+        bandCount++; continue;
+      }
+    }
+
+    // ═══ 4. ОДДИЙ МАТН ═══
+    if (cur) {
+      cur.text += (cur.text ? '\n' : '') + line;
+    }
+  }
+  flush();
+
+  if (!parsed.length) {
+    resultEl.innerHTML = '⚠️ Модда топилмади. Матнда «1-модда» каби моддалар борлигини текширинг ёки <code>###</code> белгисини ишлатинг.';
+    return;
+  }
+
+  // Bo'sh qatorlarni tozalash
+  document.querySelectorAll('#moddaRows .modda-row').forEach(row=>{
+    const num = row.querySelector('.md-num').value.trim();
+    const text = row.querySelector('.md-text').value.trim();
+    if (!num && !text) row.remove();
+  });
+
+  parsed.forEach(p=> addModdaRow(p.num, p.title, p.bob, p.text));
+
+  let msg = '✅ <strong>' + parsed.length + ' та модда</strong> ажратилди';
+  const extras = [];
+  if (bolimCount) extras.push(bolimCount + ' бўлим');
+  if (bobCount) extras.push(bobCount + ' боб');
+  if (bandCount) extras.push(bandCount + ' банд');
+  if (extras.length) msg += ' (' + extras.join(', ') + ')';
+  msg += '. Қуйида текшириб, тузатинг.';
+  resultEl.innerHTML = msg;
+
+  document.getElementById('bulkText').value = '';
+  setTimeout(()=>{
+    document.getElementById('moddaRows').scrollIntoView({behavior:'smooth', block:'start'});
+  }, 300);
+}
+
+// ── Намуна қолип киритиш ──
+function insertTemplate() {
+  const tmpl = `# I БЎЛИМ. Умумий қоидалар
+## 1-боб. Асосий ҳолатлар
+### 1-модда. Қонуннинг мақсади
+Ушбу қонун қуйидаги муносабатларни тартибга солади:
+- фуқароларнинг ҳуқуқ ва эркинликлари;
+- давлат органларининг ваколатлари;
+- жавобгарлик тартиби.
+### 2-модда. Асосий тушунчалар
+Ушбу қонунда қуйидаги тушунчалар қўлланилади.
+## 2-боб. Махсус қоидалар
+### 3-модда. Қўлланиш доираси
+Ушбу боб қуйидаги ҳолларда қўлланилади.`;
+  document.getElementById('bulkText').value = tmpl;
+  document.getElementById('bulkText').focus();
+}
+
+// ── ТЕЗ КИРИТИШ (тугади) ──
+
+function insertRef(btn) {
+  const row = btn.closest('.modda-row');
+  const refId = row.querySelector('.md-ref-doc').value;
+  const refText = row.querySelector('.md-ref-text').value.trim();
+  if (!refId) { alert('Аввал ҳужжатни танланг.'); return; }
+  if (!refText) { alert('Кўринадиган матнни ёзинг (масалан: ФК 5-модда).'); return; }
+  const textarea = row.querySelector('.md-text');
+  const refHtml = ' <span class="cross-ref" onclick="scrollToDoc(\'' + refId + '\')">' + refText + '</span>';
+  // Kursor joyiga yoki oxiriga qo'shish
+  const pos = textarea.selectionStart || textarea.value.length;
+  textarea.value = textarea.value.slice(0,pos) + refHtml + textarea.value.slice(pos);
+  // Maydonlarni tozalash
+  row.querySelector('.md-ref-text').value = '';
+  row.querySelector('.md-ref-doc').value = '';
+  textarea.focus();
+}
+
+// ── ҲУЖЖАТНИ ЎЧИРИШ ──
+async function deleteCurrentDoc() {
+  if (!currentDoc) return;
+  const d = currentDoc;
+  if (!confirm('"' + d.title + '" ҳужжатини бутунлай ўчирилсинми?\n\nБу амални ортга қайтариб бўлмайди.')) return;
+
+  if (!DEMO_MODE && db) {
+    try {
+      // moddalar cascade orqali avtomatik o'chadi, lekin aniqlik uchun:
+      await db.from('moddalar').delete().eq('hujjat_id', d.id);
+      const { error } = await db.from('hujjatlar').delete().eq('id', d.id);
+      if (error) throw error;
+    } catch(e) {
+      showBanner('❌ Ўчиришда хато: ' + e.message, 'warn');
+      return;
+    }
+  }
+
+  docs = docs.filter(x=>x.id!==d.id);
+  bookmarkedDocs.delete(d.id);
+  currentDoc = null;
+  renderDocList();
+  // Boshqa hujjatni ochish yoki bo'sh holat
+  if (docs.length) openDoc(docs[0].id);
+  else {
+    document.getElementById('readerContent').style.display = 'none';
+    document.getElementById('readerToolbar').style.display = 'none';
+    document.getElementById('readerEmpty').style.display = 'flex';
+  }
+  showBanner('🗑 "' + d.title + '" ўчирилди', 'success');
+}
+
+// ── INIT ──
+async function init() {
+  await loadDocs();
+  await loadUserData();
+  renderDocList();
+  // Мобилда — moddalar ro'yxati ochiq, reader yashirin (foydalanuvchi ҳужжатни танлаб ўтсин)
+  if (window.innerWidth <= 768) {
+    document.querySelector('.doc-list-panel')?.classList.add('mobile-show');
+  } else if (docs.length) {
+    openDoc(docs[0].id);
+  }
+}
+// Sidebar элементини босгандан кейин ёпиш (мобилда)
+document.addEventListener('click', (e)=>{
+  if (window.innerWidth > 768) return;
+  const item = e.target.closest('.sidebar-item');
+  if (item && !item.querySelector('#qarorSub')) {
+    setTimeout(()=>{
+      document.querySelector('.sidebar')?.classList.remove('open');
+      document.getElementById('mobileBackdrop')?.classList.remove('open');
+    }, 100);
+  }
+});
+// Service Worker — офлайн режим учун
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(e=>console.log('SW xato:', e));
+  });
+}
+init();
+</script>
+</body>
+</html>

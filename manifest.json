@@ -1,0 +1,27 @@
+{
+  "name": "LexUz — Қонунчилик базаси",
+  "short_name": "LexUz",
+  "description": "Ўзбекистон қонунчилиги ва норматив ҳужжатлар базаси. СИ ёрдамчи билан.",
+  "start_url": "./lexuz-supabase.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f7f4ef",
+  "theme_color": "#1a1814",
+  "lang": "uz",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "education", "business"]
+}
